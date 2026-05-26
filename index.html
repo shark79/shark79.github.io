@@ -6,23 +6,23 @@
   <title>Shashank Jamkhandi — AI Engineer</title>
   <meta name="description" content="AI Engineer building agents, RAG pipelines, and GenAI systems that actually work."/>
   <link rel="preconnect" href="https://fonts.googleapis.com"/>
-  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;500;600;700;800&family=Inter:wght@300;400;500&display=swap" rel="stylesheet"/>
+  <link href="https://fonts.googleapis.com/css2?family=Saira:ital,wght@0,100..900;1,100..900&display=swap" rel="stylesheet"/>
   <style>
     /* ─── RESET & ROOT ─────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
     :root {
-      --bg:      #0b0b0b;
-      --bg2:     #111;
-      --bg3:     #161616;
-      --text:    #f0ede8;
-      --muted:   #666;
-      --dim:     #2a2a2a;
-      --accent:  #c8ff57;
-      --border:  #1e1e1e;
-      --font-display: 'Syne', sans-serif;
-      --font-body:    'Inter', sans-serif;
-      --font-mono:    'SF Mono', 'Fira Mono', monospace;
+      --bg:      #0e0c0a;
+      --bg2:     #141210;
+      --bg3:     #1b1815;
+      --text:    #edeae4;
+      --muted:   #7a7470;
+      --dim:     #2c2825;
+      --accent:  #c0a07a;
+      --border:  #221f1c;
+      --font-display: 'Saira', sans-serif;
+      --font-body:    'Saira', sans-serif;
+      --font-mono:    'Saira', sans-serif;
     }
 
     html { scroll-behavior: smooth; font-size: 16px; }
@@ -32,12 +32,13 @@
       color: var(--text);
       font-family: var(--font-body);
       font-weight: 300;
+      font-variation-settings: 'wght' 300;
       line-height: 1.65;
       overflow-x: hidden;
       cursor: none;
     }
 
-    ::selection { background: var(--accent); color: #000; }
+    ::selection { background: var(--accent); color: var(--bg); }
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
     ::-webkit-scrollbar-thumb { background: var(--dim); }
@@ -185,7 +186,7 @@
     .hero-line:nth-child(4) .hero-line-inner { animation-delay: 1.46s; }
     .hl-accent { color: var(--accent); }
     .hl-outline {
-      -webkit-text-stroke: 2px var(--text);
+      -webkit-text-stroke: 1.5px var(--muted);
       color: transparent;
     }
     @keyframes lineUp { to { transform: none; } }
@@ -485,7 +486,7 @@
     }
     .contact-big .hl-ac { color: var(--accent); }
     .contact-big .hl-out {
-      -webkit-text-stroke: 2px var(--text);
+      -webkit-text-stroke: 1.5px var(--muted);
       color: transparent;
     }
     .contact-email {
