@@ -6,10 +6,10 @@ import DisplayCards from "@/components/ui/display-cards";
 
 const FEATURED = [
   {
-    icon: <Bot className="size-4 text-primary-foreground" />,
-    title: "AgentCore",
-    description: "Multi-agent AWS Bedrock system",
-    date: "2026",
+    icon: <BarChart3 className="size-4 text-primary-foreground" />,
+    title: "Google Fiber",
+    description: "Customer support call analysis",
+    date: "2024",
     iconClassName: "bg-primary",
     titleClassName: "text-foreground",
     className:
@@ -36,13 +36,14 @@ const FEATURED = [
       "[grid-area:stack] translate-x-32 translate-y-20 hover:translate-y-10 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-border before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-background/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration-700 hover:grayscale-0 before:left-0 before:top-0",
   },
   {
-    icon: <BarChart3 className="size-4 text-primary-foreground" />,
-    title: "Google Fiber",
-    description: "Customer support call analysis",
-    date: "2024",
+    icon: <Bot className="size-4 text-primary-foreground" />,
+    title: "AgentCore",
+    description: "Multi-agent AWS Bedrock system",
+    date: "2026",
     iconClassName: "bg-primary",
     titleClassName: "text-foreground",
-    className: "[grid-area:stack] translate-x-48 translate-y-28 hover:translate-y-16",
+    className:
+      "[grid-area:stack] translate-x-48 translate-y-28 hover:translate-y-16 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-border before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-background/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration-700 hover:grayscale-0 before:left-0 before:top-0",
   },
 ];
 

@@ -1,5 +1,6 @@
 import { Nav } from "@/components/nav";
 import { Footer } from "@/components/footer";
+import { NameBanner } from "@/components/sections/name-banner";
 import { Hero } from "@/components/sections/hero";
 import { Showreel } from "@/components/sections/showreel";
 import { About } from "@/components/sections/about";
@@ -14,6 +15,7 @@ export default function Home() {
     <>
       <Nav />
       <main className="flex-1">
+        <NameBanner />
         <Hero />
         <Showreel />
         <About />

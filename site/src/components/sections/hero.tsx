@@ -5,10 +5,7 @@ import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button
 
 export function Hero() {
   return (
-    <section
-      id="top"
-      className="relative flex min-h-[100svh] flex-col justify-end overflow-hidden px-6 pb-20 pt-32 sm:px-10"
-    >
+    <section className="relative flex min-h-[70svh] flex-col justify-end overflow-hidden px-6 pb-20 pt-12 sm:px-10">
       <DottedSurface className="opacity-60" />
       <div
         aria-hidden="true"
