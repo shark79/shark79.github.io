@@ -20,7 +20,7 @@ export function Gallery() {
   return (
     <section id="gallery" className="border-b border-border py-24">
       <div className="mx-auto mb-12 max-w-5xl px-6 sm:px-10">
-        <div className="flex items-baseline gap-6">
+        <div className="glass-panel flex items-baseline gap-6 px-6 py-5 sm:px-8">
           <span className="font-mono text-xs text-muted-foreground">05</span>
           <h2 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
             Off the clock

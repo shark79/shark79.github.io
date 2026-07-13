@@ -81,7 +81,7 @@ const CATEGORIES = [
 export function Skills() {
   return (
     <section className="border-b border-border px-6 py-24 sm:px-10">
-      <div className="mx-auto max-w-5xl">
+      <div className="glass-panel mx-auto max-w-5xl px-6 py-10 sm:px-10 sm:py-14">
         <div className="mb-16 flex items-baseline gap-6">
           <span className="font-mono text-xs text-muted-foreground">04</span>
           <h2 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">

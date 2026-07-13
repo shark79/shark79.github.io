@@ -20,7 +20,7 @@ const spaceGrotesk = Space_Grotesk({
 });
 
 export const metadata: Metadata = {
-  title: "Shashank Jamkhandi — AI Engineer / GenAI Developer",
+  title: "Shashank Jamkhandi · AI Engineer / GenAI Developer",
   description:
     "AI Engineer / GenAI Developer shipping production RAG pipelines, LLM-orchestrated agents, and vector-search retrieval in healthcare AI.",
 };

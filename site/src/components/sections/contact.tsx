@@ -1,9 +1,11 @@
+"use client";
+
 import { InteractiveHoverButton } from "@/components/ui/interactive-hover-button";
 
 export function Contact() {
   return (
     <section id="contact" className="px-6 py-24 sm:px-10">
-      <div className="mx-auto max-w-5xl">
+      <div className="glass-panel mx-auto max-w-5xl px-6 py-10 sm:px-10 sm:py-14">
         <p className="mb-6 flex items-center gap-3 font-mono text-xs uppercase tracking-[0.2em] text-muted-foreground">
           <span className="inline-block h-px w-8 bg-muted-foreground" />
           Let&apos;s build something
@@ -28,7 +30,13 @@ export function Contact() {
               ↗
             </span>
           </a>
-          <InteractiveHoverButton text="Say hi" className="w-32" />
+          <InteractiveHoverButton
+            text="Say hi"
+            className="w-32"
+            onClick={() => {
+              window.location.href = "mailto:shashankjamkhandi@gmail.com";
+            }}
+          />
         </div>
 
         <div className="mt-10 flex flex-wrap gap-6">

@@ -30,7 +30,12 @@ function DisplayCard({
       )}
     >
       <div>
-        <span className="relative inline-block rounded-full bg-blue-800 p-1">
+        <span
+          className={cn(
+            "relative inline-block rounded-full bg-blue-800 p-1",
+            iconClassName,
+          )}
+        >
           {icon}
         </span>
         <p className={cn("text-lg font-medium", titleClassName)}>{title}</p>
