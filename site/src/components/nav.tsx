@@ -16,7 +16,7 @@ export function Nav() {
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 bg-background/70 backdrop-blur-md transition-colors">
-      <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
+      <nav className="flex w-full items-center justify-between px-6 py-4 sm:px-10 lg:px-14">
         <a
           href="#top"
           className="font-heading text-sm font-semibold tracking-tight"
@@ -36,14 +36,14 @@ export function Nav() {
             </li>
           ))}
         </ul>
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-4">
+          <ThemeToggle />
           <a
             href="#contact"
             className="hidden rounded-full border border-border px-4 py-1.5 text-xs font-medium uppercase tracking-widest transition-colors hover:border-primary hover:text-primary sm:inline-block"
           >
             Let&apos;s talk
           </a>
-          <ThemeToggle />
           <button
             type="button"
             aria-label={open ? "Close menu" : "Open menu"}
