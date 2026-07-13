@@ -17,6 +17,8 @@ export interface CursorDrivenParticleTypographyProps {
   dispersionStrength?: number;
   returnSpeed?: number;
   color?: string;
+  /** Radius (px) around the cursor/touch point that pushes particles away. */
+  interactionRadius?: number;
 }
 
 class Particle {
@@ -30,6 +32,7 @@ class Particle {
   color: string;
   dispersion: number;
   returnSpd: number;
+  interactionRadius: number;
 
   constructor(
     x: number,
@@ -37,7 +40,8 @@ class Particle {
     size: number,
     color: string,
     dispersion: number,
-    returnSpd: number
+    returnSpd: number,
+    interactionRadius: number
   ) {
     this.x = x + (Math.random() - 0.5) * 10;
     this.y = y + (Math.random() - 0.5) * 10;
@@ -49,13 +53,14 @@ class Particle {
     this.color = color;
     this.dispersion = dispersion;
     this.returnSpd = returnSpd;
+    this.interactionRadius = interactionRadius;
   }
 
   update(mouseX: number, mouseY: number) {
     const dx = mouseX - this.x;
     const dy = mouseY - this.y;
     const distance = Math.sqrt(dx * dx + dy * dy);
-    const interactionRadius = 120;
+    const interactionRadius = this.interactionRadius;
 
     if (distance < interactionRadius && mouseX !== -1000 && mouseY !== -1000) {
       const forceDirectionX = dx / distance;
@@ -107,6 +112,7 @@ export function CursorDrivenParticleTypography({
   dispersionStrength = 15,
   returnSpeed = 0.08,
   color,
+  interactionRadius = 60,
 }: CursorDrivenParticleTypographyProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -134,6 +140,14 @@ export function CursorDrivenParticleTypography({
 
       containerWidth = container.clientWidth;
       containerHeight = container.clientHeight;
+
+      // Container is hidden (display: none, e.g. the responsive twin of
+      // this component on the other breakpoint) — nothing to draw, and
+      // getImageData would throw on a zero-size canvas.
+      if (containerWidth === 0 || containerHeight === 0) {
+        particles = [];
+        return;
+      }
 
       const dpr = window.devicePixelRatio || 1;
       canvas.width = containerWidth * dpr;
@@ -183,7 +197,21 @@ export function CursorDrivenParticleTypography({
 
       particles = [];
 
-      const step = Math.max(1, Math.floor(particleDensity * dpr));
+      // Scale sampling density and dot size to the actual rendered font
+      // size, not just the container. Without this, small text (e.g. a
+      // long name fit into a narrow phone screen) gets sampled with the
+      // same absolute pixel step as large desktop text, and the dots
+      // merge into an illegible blob instead of resolving letterforms.
+      const referenceFontSizeForDensity = 160;
+      const densityScale = Math.max(
+        0.35,
+        Math.min(1, effectiveFontSize / referenceFontSizeForDensity)
+      );
+      const step = Math.max(
+        1,
+        Math.round(particleDensity * densityScale * dpr)
+      );
+      const scaledParticleSize = Math.max(0.55, particleSize * densityScale);
 
       for (let y = 0; y < textCoordinates.height; y += step) {
         for (let x = 0; x < textCoordinates.width; x += step) {
@@ -195,10 +223,11 @@ export function CursorDrivenParticleTypography({
               new Particle(
                 x / dpr,
                 y / dpr,
-                particleSize,
+                scaledParticleSize,
                 textColor,
                 dispersionStrength,
-                returnSpeed
+                returnSpeed,
+                interactionRadius
               )
             );
           }
@@ -279,6 +308,7 @@ export function CursorDrivenParticleTypography({
     returnSpeed,
     color,
     resolvedTheme,
+    interactionRadius,
   ]);
 
   return (

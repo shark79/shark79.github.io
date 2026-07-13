@@ -1,67 +1,26 @@
 "use client";
 
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Sparkles, Bot, ShieldCheck, BarChart3, ChevronDown } from "lucide-react";
 import DisplayCards from "@/components/ui/display-cards";
 
-const FEATURED = [
-  {
-    icon: <BarChart3 className="size-4 text-primary-foreground" />,
-    title: "Google Fiber",
-    description: "Customer support call analysis",
-    date: "2024",
-    iconClassName: "bg-primary",
-    titleClassName: "text-foreground",
-    className:
-      "[grid-area:stack] hover:-translate-y-10 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-border before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-background/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration-700 hover:grayscale-0 before:left-0 before:top-0",
-  },
-  {
-    icon: <Sparkles className="size-4 text-primary-foreground" />,
-    title: "SkillSynQ",
-    description: "GenAI job-skill mapping agent",
-    date: "2025",
-    iconClassName: "bg-primary",
-    titleClassName: "text-foreground",
-    className:
-      "[grid-area:stack] translate-x-16 translate-y-10 hover:-translate-y-1 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-border before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-background/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration-700 hover:grayscale-0 before:left-0 before:top-0",
-  },
-  {
-    icon: <ShieldCheck className="size-4 text-primary-foreground" />,
-    title: "StyloGuard",
-    description: "Stylometric authorship verification",
-    date: "2025",
-    iconClassName: "bg-primary",
-    titleClassName: "text-foreground",
-    className:
-      "[grid-area:stack] translate-x-32 translate-y-20 hover:translate-y-10 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-border before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-background/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration-700 hover:grayscale-0 before:left-0 before:top-0",
-  },
-  {
-    icon: <Bot className="size-4 text-primary-foreground" />,
-    title: "AgentCore",
-    description: "Multi-agent AWS Bedrock system",
-    date: "2026",
-    iconClassName: "bg-primary",
-    titleClassName: "text-foreground",
-    className:
-      "[grid-area:stack] translate-x-48 translate-y-28 hover:translate-y-16 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-border before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-background/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration-700 hover:grayscale-0 before:left-0 before:top-0",
-  },
-];
-
 const PROJECTS = [
   {
-    name: "Production Agentic AI on AWS Bedrock AgentCore",
-    period: "2026",
+    id: "googlefiber",
+    name: "Google Fiber Customer Support Analysis",
+    period: "Sept 2024 to Nov 2024",
     brief:
-      "Builds a system where multiple AI agents split up a task instead of one model trying to do everything. Runs on AWS Bedrock AgentCore, coordinated with CrewAI and connected to outside tools through MCP.",
-    tags: ["AWS Bedrock AgentCore", "CrewAI", "MCP", "OpenTelemetry"],
+      "Dug into support call data and found exactly where the biggest customer problems were coming from.",
+    tags: ["Tableau", "BigQuery", "ETL", "Python"],
     whatItDoes:
-      "Instead of one AI model trying to handle an entire task, this splits the work across several agents that each handle a piece of it, then hands off between them. It's built on AWS Bedrock AgentCore and coordinated with a framework called CrewAI, with a protocol called MCP letting the agents call outside tools when they need to. The example I built around it is a travel agent that researches, plans, and recommends a full itinerary on its own.",
+      "I analyzed patterns in repeat support calls to find where the real problems were coming from. Turned out one market region alone was behind 62% of all repeat calls.",
     impact:
-      "I think most serious AI products are going to need this kind of setup eventually, several focused agents instead of one giant prompt trying to do everything. It also pushed me to learn a very new part of AWS before most people had touched it.",
+      "That kind of finding changes where a company actually puts its resources. Instead of spreading fixes evenly, they could focus on the one region causing most of the pain, and I built dashboards so the team could track it going forward.",
     whatILearned:
-      "Multi-agent systems break in different ways than single-agent ones do. Getting agents to hand off work cleanly and stay in their own lane took more design thinking than the actual AI logic did.",
+      "The best insights are often sitting in data nobody bothered to slice the right way. This wasn't a complicated model, just the right question asked of the right data.",
   },
   {
+    id: "skillsynq",
     name: "SkillSynQ",
     period: "Feb 2025 to Mar 2025",
     brief:
@@ -75,6 +34,7 @@ const PROJECTS = [
       "Scraping live data is messier than any tutorial makes it look. I spent more time handling broken page layouts and rate limits than I did on the actual matching logic.",
   },
   {
+    id: "styloguard",
     name: "Stylometric Authorship Verification",
     period: "Feb 2025 to May 2025",
     brief:
@@ -88,22 +48,89 @@ const PROJECTS = [
       "Tuning this to catch real inconsistencies without flagging normal variation in someone's writing was the hardest part. People's writing style shifts more than you'd expect, even within the same week.",
   },
   {
-    name: "Google Fiber Customer Support Analysis",
-    period: "Sept 2024 to Nov 2024",
+    id: "agentcore",
+    name: "Production Agentic AI on AWS Bedrock AgentCore",
+    period: "2026",
     brief:
-      "Dug into support call data and found exactly where the biggest customer problems were coming from.",
-    tags: ["Tableau", "BigQuery", "ETL", "Python"],
+      "Builds a system where multiple AI agents split up a task instead of one model trying to do everything. Runs on AWS Bedrock AgentCore, coordinated with CrewAI and connected to outside tools through MCP.",
+    tags: ["AWS Bedrock AgentCore", "CrewAI", "MCP", "OpenTelemetry"],
     whatItDoes:
-      "I analyzed patterns in repeat support calls to find where the real problems were coming from. Turned out one market region alone was behind 62% of all repeat calls.",
+      "Instead of one AI model trying to handle an entire task, this splits the work across several agents that each handle a piece of it, then hands off between them. It's built on AWS Bedrock AgentCore and coordinated with a framework called CrewAI, with a protocol called MCP letting the agents call outside tools when they need to. The example I built around it is a travel agent that researches, plans, and recommends a full itinerary on its own.",
     impact:
-      "That kind of finding changes where a company actually puts its resources. Instead of spreading fixes evenly, they could focus on the one region causing most of the pain, and I built dashboards so the team could track it going forward.",
+      "I think most serious AI products are going to need this kind of setup eventually, several focused agents instead of one giant prompt trying to do everything. It also pushed me to learn a very new part of AWS before most people had touched it.",
     whatILearned:
-      "The best insights are often sitting in data nobody bothered to slice the right way. This wasn't a complicated model, just the right question asked of the right data.",
+      "Multi-agent systems break in different ways than single-agent ones do. Getting agents to hand off work cleanly and stay in their own lane took more design thinking than the actual AI logic did.",
+  },
+];
+
+const FEATURED_META = [
+  {
+    id: "googlefiber",
+    icon: <BarChart3 className="size-4 text-primary-foreground" />,
+    title: "Google Fiber",
+    description: "Customer support call analysis",
+    date: "2024",
+    iconClassName: "bg-primary",
+    titleClassName: "text-foreground",
+    className:
+      "[grid-area:stack] hover:-translate-y-10 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-border before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-background/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration-700 hover:grayscale-0 before:left-0 before:top-0",
+  },
+  {
+    id: "skillsynq",
+    icon: <Sparkles className="size-4 text-primary-foreground" />,
+    title: "SkillSynQ",
+    description: "GenAI job-skill mapping agent",
+    date: "2025",
+    iconClassName: "bg-primary",
+    titleClassName: "text-foreground",
+    className:
+      "[grid-area:stack] translate-x-16 translate-y-10 hover:-translate-y-1 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-border before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-background/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration-700 hover:grayscale-0 before:left-0 before:top-0",
+  },
+  {
+    id: "styloguard",
+    icon: <ShieldCheck className="size-4 text-primary-foreground" />,
+    title: "StyloGuard",
+    description: "Stylometric authorship verification",
+    date: "2025",
+    iconClassName: "bg-primary",
+    titleClassName: "text-foreground",
+    className:
+      "[grid-area:stack] translate-x-32 translate-y-20 hover:translate-y-10 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-border before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-background/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration-700 hover:grayscale-0 before:left-0 before:top-0",
+  },
+  {
+    id: "agentcore",
+    icon: <Bot className="size-4 text-primary-foreground" />,
+    title: "AgentCore",
+    description: "Multi-agent AWS Bedrock system",
+    date: "2026",
+    iconClassName: "bg-primary",
+    titleClassName: "text-foreground",
+    className:
+      "[grid-area:stack] translate-x-48 translate-y-28 hover:translate-y-16 before:absolute before:w-[100%] before:outline-1 before:rounded-xl before:outline-border before:h-[100%] before:content-[''] before:bg-blend-overlay before:bg-background/50 grayscale-[100%] hover:before:opacity-0 before:transition-opacity before:duration-700 hover:grayscale-0 before:left-0 before:top-0",
   },
 ];
 
 export function Projects() {
   const [open, setOpen] = useState<string | null>(null);
+  const [highlighted, setHighlighted] = useState<string | null>(null);
+  const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
+
+  const goToProject = (id: string) => {
+    setOpen(id);
+    const el = rowRefs.current[id];
+    if (el) {
+      el.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+    setHighlighted(id);
+    window.setTimeout(() => {
+      setHighlighted((current) => (current === id ? null : current));
+    }, 1600);
+  };
+
+  const featuredCards = FEATURED_META.map((meta) => ({
+    ...meta,
+    onClick: () => goToProject(meta.id),
+  }));
 
   return (
     <section id="work" className="border-b border-border px-6 py-24 sm:px-10">
@@ -116,17 +143,24 @@ export function Projects() {
         </div>
 
         <div className="mb-24 hidden justify-center pb-8 sm:flex">
-          <DisplayCards cards={FEATURED} />
+          <DisplayCards cards={featuredCards} />
         </div>
 
         <div className="border-t border-border">
           {PROJECTS.map((p) => {
-            const isOpen = open === p.name;
+            const isOpen = open === p.id;
+            const isHighlighted = highlighted === p.id;
             return (
-              <div key={p.name} className="border-b border-border">
+              <div
+                key={p.id}
+                ref={(el) => {
+                  rowRefs.current[p.id] = el;
+                }}
+                className={`border-b border-border ${isHighlighted ? "project-highlight" : ""}`}
+              >
                 <button
                   type="button"
-                  onClick={() => setOpen(isOpen ? null : p.name)}
+                  onClick={() => setOpen(isOpen ? null : p.id)}
                   aria-expanded={isOpen}
                   className="group w-full py-7 text-left"
                 >
