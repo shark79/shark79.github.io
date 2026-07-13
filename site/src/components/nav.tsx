@@ -1,7 +1,6 @@
 "use client";
 
 import * as React from "react";
-import Link from "next/link";
 import { Menu, X } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
 
@@ -18,13 +17,13 @@ export function Nav() {
   return (
     <header className="fixed inset-x-0 top-0 z-50 bg-background/70 backdrop-blur-md transition-colors">
       <nav className="mx-auto flex max-w-5xl items-center justify-between px-6 py-4">
-        <Link
+        <a
           href="#top"
           className="font-heading text-sm font-semibold tracking-tight"
           onClick={() => setOpen(false)}
         >
           sj<span className="text-primary">.</span>
-        </Link>
+        </a>
         <ul className="hidden items-center gap-8 sm:flex">
           {LINKS.map((l) => (
             <li key={l.href}>
