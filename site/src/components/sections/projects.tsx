@@ -14,7 +14,9 @@ import {
 } from "lucide-react";
 import DisplayCards from "@/components/ui/display-cards";
 import { SeatRace } from "@/components/ui/seat-race";
-import { clearLevel, useCleared } from "@/lib/progress";
+import { Level, LevelBadge, type Stat } from "@/components/ui/level";
+import { useMode } from "@/lib/mode";
+import { TOTAL_LEVELS, useProgress } from "@/lib/progress";
 
 type Quiz = {
   question: string;
@@ -34,6 +36,7 @@ type Project = {
   impact: string;
   whatILearned: string;
   quiz: Quiz;
+  stats: Stat[];
 };
 
 // Newest first. Keep this order — the section reads as a timeline.
@@ -65,6 +68,12 @@ const PROJECTS: Project[] = [
       reveal:
         "$11.56 for 27.5M tokens. Open-weight models via OpenRouter, an 88.2% cache hit rate, and a blended $0.42 per million tokens.",
     },
+    stats: [
+      { label: "Total model spend", value: "$11.56" },
+      { label: "Tokens", value: "27.5M" },
+      { label: "Requests", value: "340" },
+      { label: "Cache hit rate", value: "88.2%" },
+    ],
   },
   {
     id: "reservation",
@@ -93,6 +102,12 @@ const PROJECTS: Project[] = [
       reveal:
         "Exactly one. Every seat is its own durable actor, so changes queue up and each one re-checks the real current state before it commits. There is no gap for the second request to slip through.",
     },
+    stats: [
+      { label: "Failure modes survived", value: "4" },
+      { label: "Tests that cause them", value: "4" },
+      { label: "Front ends, one backend", value: "2" },
+      { label: "Hand-written locks", value: "0" },
+    ],
   },
   {
     id: "jobfinder",
@@ -122,6 +137,12 @@ const PROJECTS: Project[] = [
       reveal:
         "Zero. The send tool was never added to its permitted list, only create-draft. It's a structural limit, not an instruction it could talk itself out of.",
     },
+    stats: [
+      { label: "Job boards queried live", value: "3" },
+      { label: "Emails it can send", value: "0" },
+      { label: "Published npm package", value: "1" },
+      { label: "Source of sponsor data", value: "DOL" },
+    ],
   },
   {
     id: "agentcore",
@@ -148,6 +169,12 @@ const PROJECTS: Project[] = [
       reveal:
         "The handoffs. Each agent works fine alone. Getting them to pass work cleanly and stay in their own lane took more design than the AI logic did.",
     },
+    stats: [
+      { label: "Agents sharing the task", value: "4" },
+      { label: "One giant prompt", value: "0" },
+      { label: "Tool protocol", value: "MCP" },
+      { label: "Traced end to end", value: "Yes" },
+    ],
   },
   {
     id: "styloguard",
@@ -171,6 +198,12 @@ const PROJECTS: Project[] = [
       reveal:
         "Ten, from sentence length to punctuation habits. Enough to catch a real mismatch, few enough that you can explain to a person why something got flagged.",
     },
+    stats: [
+      { label: "Style features compared", value: "10" },
+      { label: "Text it needs copied", value: "0" },
+      { label: "Beats paraphrasing", value: "Yes" },
+      { label: "Built over", value: "4 mo" },
+    ],
   },
   {
     id: "skillsynq",
@@ -193,6 +226,12 @@ const PROJECTS: Project[] = [
       reveal:
         "36 hours. Most of it went on scraping live job and course pages that kept changing shape, not on the matching logic.",
     },
+    stats: [
+      { label: "Empty repo to demo", value: "36h" },
+      { label: "Picked for showcase", value: "Yes" },
+      { label: "Servers to manage", value: "0" },
+      { label: "Steps to enroll", value: "1" },
+    ],
   },
   {
     id: "googlefiber",
@@ -215,6 +254,12 @@ const PROJECTS: Project[] = [
       reveal:
         "62%, from one region. Nothing clever in the model, just slicing the data by a dimension nobody had tried.",
     },
+    stats: [
+      { label: "Repeat calls, one region", value: "62%" },
+      { label: "Regions analysed", value: "8" },
+      { label: "Dashboards shipped", value: "Live" },
+      { label: "Models required", value: "0" },
+    ],
   },
 ];
 
@@ -275,17 +320,12 @@ const ICON_BY_ID: Record<string, React.ReactNode> = {
 export function Projects() {
   const [open, setOpen] = useState<string | null>(null);
   const [highlighted, setHighlighted] = useState<string | null>(null);
-  const [picks, setPicks] = useState<Record<string, number>>({});
   const rowRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const cleared = useCleared();
-  const called = Object.keys(picks).length;
-  const right = PROJECTS.filter((p) => picks[p.id] === p.quiz.answer).length;
-
-  const answer = (id: string, choice: number) => {
-    setPicks((prev) => (id in prev ? prev : { ...prev, [id]: choice }));
-    clearLevel(id);
-  };
+  const mode = useMode();
+  const { cleared } = useProgress();
+  const playing = mode === "play";
+  const here = PROJECTS.filter((p) => cleared.includes(p.id)).length;
 
   const goToProject = (id: string) => {
     setOpen(id);
@@ -312,24 +352,23 @@ export function Projects() {
           <h2 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
             Selected work
           </h2>
-          <span
-            aria-live="polite"
-            className={`ml-auto rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-widest transition-colors ${
-              called === PROJECTS.length
-                ? "border-primary/50 text-primary"
-                : "border-border text-muted-foreground"
-            }`}
-          >
-            {called === 0
-              ? "7 levels here"
-              : `${right} of ${called} called right`}
-          </span>
+          {playing && (
+            <span
+              aria-live="polite"
+              className={`ml-auto rounded-full border px-3 py-1 font-mono text-[10px] uppercase tracking-widest transition-colors ${
+                here === PROJECTS.length
+                  ? "border-primary/50 text-primary"
+                  : "border-border text-muted-foreground"
+              }`}
+            >
+              {here} of {PROJECTS.length} cleared here
+            </span>
+          )}
         </div>
         <p className="mb-14 max-w-xl text-sm leading-relaxed text-muted-foreground">
-          Eight levels on this page, seven of them here. Open a project and
-          make the call on one real number before you read the answer — most
-          people get the cheap one wrong. Level 02 you can run yourself. The
-          ring up top tracks how many you&apos;ve cleared.
+          {playing
+            ? `Levels 02 to 08. Open a project, watch what it does, then make one call before the real numbers unlock. Level 03 you can run yourself. The ring up top tracks all ${TOTAL_LEVELS}.`
+            : "Seven projects, newest first. Open any of them for what it does, what it changed, and what I took away."}
         </p>
 
         <div className="mb-24 hidden justify-center pb-8 sm:flex">
@@ -337,12 +376,9 @@ export function Projects() {
         </div>
 
         <div className="border-t border-border">
-          {PROJECTS.map((p, index) => {
+          {PROJECTS.map((p) => {
             const isOpen = open === p.id;
             const isHighlighted = highlighted === p.id;
-            const picked = picks[p.id];
-            const settled = picked !== undefined;
-            const isCleared = cleared.includes(p.id);
             return (
               <div
                 key={p.id}
@@ -357,20 +393,7 @@ export function Projects() {
                   aria-expanded={isOpen}
                   className="group w-full py-7 text-left"
                 >
-                  <div className="mb-2 flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest">
-                    <span
-                      className={
-                        isCleared ? "text-primary" : "text-muted-foreground"
-                      }
-                    >
-                      Level {String(index + 1).padStart(2, "0")}
-                    </span>
-                    {isCleared && (
-                      <span className="race-pop rounded-full bg-primary/10 px-2 py-0.5 text-primary">
-                        Cleared
-                      </span>
-                    )}
-                  </div>
+                  <LevelBadge id={p.id} />
                   <div className="flex items-start justify-between gap-4">
                     <h3 className="flex items-center gap-2.5 font-heading text-xl font-semibold tracking-tight transition-colors group-hover:text-primary sm:text-2xl">
                       {ICON_BY_ID[p.id] ? (
@@ -422,59 +445,11 @@ export function Projects() {
                 ) : null}
 
                 {isOpen && (
-                  <div className="max-w-2xl space-y-5 pb-8 pl-0 pr-4 text-sm leading-relaxed text-muted-foreground">
-                    <div className="rounded-xl border border-border p-4 sm:p-5">
-                      <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-primary">
-                        Make the call
-                      </div>
-                      <p className="text-foreground">{p.quiz.question}</p>
-                      <div className="mt-4 grid gap-2 sm:grid-cols-3">
-                        {p.quiz.options.map((opt, i) => {
-                          const isAnswer = i === p.quiz.answer;
-                          const state = !settled
-                            ? "border-border text-foreground hover:border-primary hover:text-primary"
-                            : isAnswer
-                              ? "border-primary bg-primary/10 text-primary"
-                              : i === picked
-                                ? "border-destructive/60 text-destructive line-through"
-                                : "border-border text-muted-foreground/50";
-                          return (
-                            <button
-                              key={opt}
-                              type="button"
-                              disabled={settled}
-                              onClick={() => answer(p.id, i)}
-                              className={`min-h-11 rounded-lg border px-3 py-2.5 text-center text-sm transition-colors ${state}`}
-                            >
-                              {opt}
-                            </button>
-                          );
-                        })}
-                      </div>
-                      {settled && (
-                        <p className="mt-4 text-sm leading-relaxed">
-                          <span
-                            className={
-                              picked === p.quiz.answer
-                                ? "font-medium text-primary"
-                                : "font-medium text-foreground"
-                            }
-                          >
-                            {picked === p.quiz.answer
-                              ? "Called it. "
-                              : "Not quite. "}
-                          </span>
-                          {p.quiz.reveal}
-                        </p>
-                      )}
-                    </div>
-                    {/* The one project you can actually prove instead of
-                        reading about. Unlocks once the call is made. */}
-                    {p.id === "reservation" && settled && (
-                      <div className="race-pop">
-                        <SeatRace />
-                      </div>
-                    )}
+                  <div className="max-w-2xl space-y-5 pb-8 pr-4 text-sm leading-relaxed text-muted-foreground">
+                    <Level id={p.id} quiz={p.quiz} stats={p.stats}>
+                      {/* The one project you can prove instead of read. */}
+                      {p.id === "reservation" ? <SeatRace /> : null}
+                    </Level>
                     <div>
                       <div className="mb-1.5 font-mono text-[10px] uppercase tracking-widest text-primary">
                         What it does
@@ -499,17 +474,6 @@ export function Projects() {
             );
           })}
         </div>
-
-        {called === PROJECTS.length && (
-          <p className="mt-8 text-sm leading-relaxed text-muted-foreground">
-            <span className="font-medium text-primary">
-              {right} out of {PROJECTS.length}.
-            </span>{" "}
-            {right === PROJECTS.length
-              ? "Nobody gets all seven honestly. Come say hello and tell me how you did it."
-              : "The ones people miss are usually the cheap ones, which is roughly the point."}
-          </p>
-        )}
       </div>
     </section>
   );

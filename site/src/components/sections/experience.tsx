@@ -1,7 +1,10 @@
 "use client";
 
 import { HallucinationGame } from "@/components/ui/hallucination-game";
-import { useCleared } from "@/lib/progress";
+import { LevelBadge } from "@/components/ui/level";
+import { LevelStage } from "@/components/ui/level-stage";
+import { useMode } from "@/lib/mode";
+import { useProgress } from "@/lib/progress";
 
 const JOBS = [
   {
@@ -84,7 +87,8 @@ const ACTIVITIES = [
 ];
 
 export function Experience() {
-  const cleared = useCleared();
+  const playing = useMode() === "play";
+  const { cleared } = useProgress();
   const accuracyCleared = cleared.includes("accuracy");
 
   return (
@@ -136,28 +140,28 @@ export function Experience() {
           ))}
         </div>
 
-        {/* Level 08. The hardest part of the day job, as a thing you do
-            rather than a bullet you skim. */}
+        {/* The hardest part of the day job, as a thing you do rather than a
+            bullet you skim. Read mode gets the same point in prose. */}
         <div className="mt-16 border-t border-border pt-10">
-          <div className="mb-4 flex flex-wrap items-center gap-2 font-mono text-[10px] uppercase tracking-widest">
-            <span
-              className={
-                accuracyCleared ? "text-primary" : "text-muted-foreground"
-              }
-            >
-              Level 08
-            </span>
-            {accuracyCleared && (
-              <span className="race-pop rounded-full bg-primary/10 px-2 py-0.5 text-primary">
-                Cleared
-              </span>
-            )}
-            <span className="text-muted-foreground">
-              · the bug class that matters most here
-            </span>
-          </div>
+          <LevelBadge id="accuracy" />
           <div className="max-w-2xl">
-            <HallucinationGame />
+            {playing ? (
+              <>
+                <LevelStage scene="accuracy" cleared={accuracyCleared} />
+                <div className="mt-4">
+                  <HallucinationGame />
+                </div>
+              </>
+            ) : (
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                The bug class that matters most here isn&apos;t a crash, it&apos;s a
+                confident wrong answer: an invented symptom, a stale date, a
+                medication list that quietly drops two prescriptions. All three
+                happened in production and all three were root-caused and fixed.
+                In a clinical product that is a patient-safety problem the
+                moment a clinician believes it, not a cosmetic bug.
+              </p>
+            )}
           </div>
         </div>
 

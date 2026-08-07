@@ -3,13 +3,29 @@
 import * as React from "react";
 import { Menu, X } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { TOTAL_LEVELS, useCleared } from "@/lib/progress";
+import { TOTAL_LEVELS, useProgress } from "@/lib/progress";
+import { resetMode, useMode } from "@/lib/mode";
 
 const RING = 2 * Math.PI * 10;
 
 function LevelRing() {
-  const cleared = useCleared();
+  const { cleared } = useProgress();
+  const mode = useMode();
   const done = cleared.length;
+
+  // In read mode there is no run to track, so the ring stays out of the way.
+  if (mode !== "play") {
+    return (
+      <button
+        type="button"
+        onClick={resetMode}
+        title="Switch to the playable version"
+        className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground transition-colors hover:text-primary"
+      >
+        Play it
+      </button>
+    );
+  }
 
   return (
     <a

@@ -2,17 +2,17 @@
 
 import { useEffect, useRef, useState } from "react";
 import * as THREE from "three";
-import { TOTAL_LEVELS, useCleared } from "@/lib/progress";
+import { TOTAL_LEVELS, useProgress } from "@/lib/progress";
 
 const COUNT = 260;
 // Light gravity plus drag: paper confetti hangs, it does not fall like gravel.
 const GRAVITY = -13;
 const LIFETIME_MS = 6500;
 
-// Deliberate exception to the "use a token" rule: confetti needs a spread of
-// hues, and the site only owns one accent. Indigo leads, the rest support it.
+// Same accent and neutrals as every level scene — the celebration has to
+// look like the rest of the site, not like a different product.
 const PALETTE = [
-  0x7c6cf5, 0x9d8cff, 0xf5c451, 0xf58a8a, 0x63d4b0, 0xf2f2f2,
+  0x9a8bff, 0x6f61c8, 0xe8e8ea, 0x7a7a80, 0x9a8bff, 0xc9c9d2,
 ];
 
 type Piece = {
@@ -155,7 +155,7 @@ function Confetti() {
 }
 
 export function LevelComplete() {
-  const cleared = useCleared();
+  const { cleared } = useProgress();
   const complete = cleared.length >= TOTAL_LEVELS;
 
   const [fired, setFired] = useState(false);
