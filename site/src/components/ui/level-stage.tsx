@@ -139,7 +139,7 @@ export function LevelStage({ scene, cleared = false, className }: Props) {
       const delta = clock.getDelta();
       acc += delta;
       if (acc < minFrame) return;
-      acc = 0;
+      acc -= minFrame;
       if (document.hidden) return;
       // One canvas for the whole page: only its current owner draws, and
       // taking it back means re-attaching and re-fitting to this host.

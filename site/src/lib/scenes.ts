@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { bounce, contactShadow, part, toon } from "@/lib/toon";
+import { bounce, contactShadow, part } from "@/lib/toon";
 import { character, type Role } from "@/lib/characters";
 
 /**
@@ -20,9 +20,9 @@ export const PALETTES = {
   light: {
     accent: 0x6d4df6,
     accentDim: 0x9c8bf5,
-    neutral: 0x3a3a42,
-    neutralDim: 0x8e8e96,
-    deep: 0xc9c9d2,
+    neutral: 0xd6d6de,
+    neutralDim: 0xa6a6b2,
+    deep: 0xbcbcc8,
     outline: 0x1c1c22,
   },
 } as const;
@@ -114,6 +114,9 @@ const agents: SceneBuilder = (group, p) => {
 /* ------------------------------------------------------------------ *
  * Level 03 — one seat, two buyers, a race you can watch land.
  * ------------------------------------------------------------------ */
+/** After the winner lands, the loser gets pushed back out. */
+const arrivedEase = (k: number) => (k > 0.8 ? bounce((k - 0.8) / 0.2) : 0);
+
 const seats: SceneBuilder = (group, p) => {
   const rows = 3;
   const cols = 7;
@@ -152,36 +155,34 @@ const seats: SceneBuilder = (group, p) => {
   }
   floor(group, 3.4, -0.75);
 
-  const runnerA = part(new THREE.IcosahedronGeometry(0.19, 1), p.accent, p.outline, 1.12);
-  const runnerB = part(new THREE.IcosahedronGeometry(0.19, 1), p.neutral, p.outline, 1.12);
-  deck.add(runnerA, runnerB);
+  // Two buyers, not two dots. Parented to the group, not the tilted deck, so
+  // they stand upright on it instead of lying back with it.
+  const buyerA = character("buyer", p, { tone: p.accent });
+  const buyerB = character("buyer", p, { tone: p.neutralDim });
+  buyerA.root.scale.setScalar(0.62);
+  buyerB.root.scale.setScalar(0.62);
+  group.add(buyerA.root, buyerB.root);
+  const runnerA = buyerA.root;
+  const runnerB = buyerB.root;
 
   const react = reactor();
 
   return {
-    frame: { z: 7.0, y: -0.15 },
+    frame: { z: 6.6, y: -0.1 },
     tick: (t) => {
       const k = (t * 0.42) % 1;
       const travel = k < 0.8 ? k / 0.8 : 1;
       const e = travel * travel * (3 - 2 * travel);
-      const target = hot.position;
 
-      runnerA.position.set(
-        -4.6 + (target.x + 4.6) * e,
-        0.55 + Math.sin(e * Math.PI) * 0.5,
-        -3 + (target.z + 3) * e,
-      );
-      runnerB.position.set(
-        4.6 + (target.x - 4.6) * e,
-        0.55 + Math.sin(e * Math.PI) * 0.5,
-        3 + (target.z - 3) * e,
-      );
-      runnerA.rotation.set(t * 3, t * 2, 0);
-      runnerB.rotation.set(-t * 3, t * 2, 0);
+      // Both converge on the seat. One arrives, the other is turned away.
+      const bounceBack = arrivedEase(k);
+      runnerA.position.set(-3.4 + 2.95 * e, -1.02, 1.5 - 0.35 * e);
+      runnerB.position.set(3.4 - 2.95 * (e - bounceBack * 0.55), -1.02, 1.5 - 0.35 * e);
+      runnerA.rotation.y = Math.PI * 0.42;
+      runnerB.rotation.y = -Math.PI * 0.42 + bounceBack * Math.PI * 0.5;
+      buyerA.update(t);
+      buyerB.update(t);
       const arrived = k > 0.8;
-      runnerA.visible = !arrived;
-      // The loser bounces off: one winner, every single time.
-      runnerB.visible = !arrived;
 
       const land = arrived ? bounce((k - 0.8) / 0.2) : 0;
       hot.scale.set(1 + land * 0.25, 1 + land * 1.5, 1 + land * 0.25);
@@ -227,9 +228,10 @@ const scan: SceneBuilder = (group, p) => {
     marks.push({ mesh: tower, angle, sponsor, base: h });
   }
 
-  const beacon = part(new THREE.ConeGeometry(0.34, 0.8, 14), p.accent, p.outline, 1.1);
-  beacon.position.y = -0.5;
-  ring.add(beacon);
+  const scout = character("scout", p, { tone: p.accent });
+  scout.root.position.y = -0.92;
+  scout.root.scale.setScalar(0.62);
+  ring.add(scout.root);
 
   const sweep = new THREE.Mesh(
     new THREE.CircleGeometry(3.3, 32, 0, 0.7),
@@ -246,12 +248,12 @@ const scan: SceneBuilder = (group, p) => {
   ring.add(sweep);
 
   return {
-    frame: { z: 7.4, y: -0.2 },
+    frame: { z: 7.2, y: -0.25 },
     tick: (t) => {
       const angle = (t * 0.8) % (Math.PI * 2);
       sweep.rotation.z = -angle;
-      beacon.rotation.y = angle;
-      beacon.position.y = -0.5 + Math.sin(t * 2) * 0.05;
+      scout.root.rotation.y = -angle + Math.PI / 2;
+      scout.update(t);
 
       marks.forEach((m) => {
         let d = Math.abs(((m.angle - angle + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
@@ -273,9 +275,11 @@ const scan: SceneBuilder = (group, p) => {
  * Level 05 — one prompt splitting into focused agents.
  * ------------------------------------------------------------------ */
 const split: SceneBuilder = (group, p) => {
-  const core = part(new THREE.IcosahedronGeometry(0.95, 1), p.accentDim, p.outline, 1.06);
-  group.add(core);
-  floor(group, 1.9);
+  const boss = character("orchestrator", p);
+  boss.root.position.y = -1.15;
+  boss.root.scale.setScalar(0.8);
+  group.add(boss.root);
+  const core = boss.root;
 
   const kids: THREE.Mesh[] = [];
   const links: THREE.Line[] = [];
@@ -294,11 +298,10 @@ const split: SceneBuilder = (group, p) => {
   }
 
   return {
-    frame: { z: 6.6, y: 0 },
+    frame: { z: 6.2, y: -0.15 },
     tick: (t) => {
-      const corePoke = react.amount(core, t);
-      core.rotation.set(t * 0.24, t * 0.42, 0);
-      core.scale.setScalar(1 + Math.sin(t * 2) * 0.04 + corePoke * 0.35);
+      boss.update(t);
+      core.rotation.y = Math.sin(t * 0.4) * 0.25;
 
       kids.forEach((kid, i) => {
         const a = t * 0.75 + (i / 3) * Math.PI * 2;
@@ -313,8 +316,14 @@ const split: SceneBuilder = (group, p) => {
         pos.needsUpdate = true;
       });
     },
-    targets: [core, ...kids],
-    hit: (object, t) => react.hit(object, t),
+    targets: [...boss.targets, ...kids],
+    hit: (object, t) => {
+      if (boss.targets.includes(object) || boss.targets.includes(object.parent!)) {
+        boss.poke(t);
+        return;
+      }
+      react.hit(object, t);
+    },
   };
 };
 
@@ -344,10 +353,15 @@ const glyphs: SceneBuilder = (group, p) => {
     page.add(bar);
     bars.push(bar);
   }
+  const reader = character("scout", p, { tone: p.neutral });
+  reader.root.position.set(-2.5, -2.05, 0.6);
+  reader.root.scale.setScalar(0.62);
+  reader.root.rotation.y = 0.6;
+  group.add(reader.root);
   floor(group, 2.6, -2.3);
 
   return {
-    frame: { z: 6.0, y: 0 },
+    frame: { z: 6.6, y: -0.5 },
     tick: (t) => {
       bars.forEach((bar, i) => {
         const isOdd = i === odd;
@@ -360,9 +374,13 @@ const glyphs: SceneBuilder = (group, p) => {
         bar.scale.y = 1 + poke * 0.6;
       });
       page.rotation.y = -0.5 + Math.sin(t * 0.28) * 0.14;
+      reader.update(t);
     },
-    targets: bars,
-    hit: (object, t) => react.hit(object, t),
+    targets: [...bars, ...reader.targets],
+    hit: (object, t) => {
+      if (reader.targets.includes(object)) reader.poke(t);
+      else react.hit(object, t);
+    },
   };
 };
 
@@ -388,6 +406,10 @@ const bars: SceneBuilder = (group, p) => {
     need.push(a);
     have.push(b);
   }
+  const seeker = character("dev", p, { tone: p.neutral });
+  seeker.root.position.set(0, -1.15, 0);
+  seeker.root.scale.setScalar(0.62);
+  stage.add(seeker.root);
   floor(group, 2.8, -1.4);
 
   const set = (m: THREE.Mesh, h: number) => {
@@ -405,9 +427,13 @@ const bars: SceneBuilder = (group, p) => {
         set(m, 0.35 + target * k + react.amount(m, t));
       });
       stage.rotation.y = 0.48 + Math.sin(t * 0.22) * 0.16;
+      seeker.update(t);
     },
-    targets: [...need, ...have],
-    hit: (object, t) => react.hit(object, t),
+    targets: [...need, ...have, ...seeker.targets],
+    hit: (object, t) => {
+      if (seeker.targets.includes(object)) seeker.poke(t);
+      else react.hit(object, t);
+    },
   };
 };
 
@@ -435,6 +461,11 @@ const spike: SceneBuilder = (group, p) => {
     stage.add(col);
     cols.push(col);
   }
+  const analyst = character("dev", p, { pose: "point", tone: p.neutral });
+  analyst.root.position.set(-2.9, -1.2, 0.7);
+  analyst.root.scale.setScalar(0.6);
+  analyst.root.rotation.y = 0.5;
+  stage.add(analyst.root);
   floor(group, 3.2, -1.35);
 
   const crown = part(new THREE.TorusGeometry(0.42, 0.05, 8, 24), p.accent, p.outline, 1.14);
@@ -442,7 +473,7 @@ const spike: SceneBuilder = (group, p) => {
   stage.add(crown);
 
   return {
-    frame: { z: 7.1, y: -0.25 },
+    frame: { z: 7.3, y: -0.3 },
     tick: (t) => {
       const cycle = (t * 0.42) % 3.4;
       const grow = Math.min(1, cycle / 1.3);
@@ -458,9 +489,13 @@ const spike: SceneBuilder = (group, p) => {
       crown.rotation.z = t * 0.9;
       crown.scale.setScalar(1 + Math.sin(t * 3) * 0.1);
       stage.rotation.y = Math.sin(t * 0.22) * 0.24;
+      analyst.update(t);
     },
-    targets: cols,
-    hit: (object, t) => react.hit(object, t),
+    targets: [...cols, ...analyst.targets],
+    hit: (object, t) => {
+      if (analyst.targets.includes(object)) analyst.poke(t);
+      else react.hit(object, t);
+    },
   };
 };
 
@@ -486,8 +521,15 @@ const stream: SceneBuilder = (group, p) => {
     items.push(mesh);
   }
 
+  const reader = character("clinician", p, { tone: p.neutral });
+  reader.root.position.set(-1.9, -1.45, 1.2);
+  reader.root.scale.setScalar(0.6);
+  reader.root.rotation.y = 0.75;
+  group.add(reader.root);
+  floor(group, 2.4, -1.5);
+
   return {
-    frame: { z: 6.4, y: 0 },
+    frame: { z: 6.4, y: -0.25 },
     tick: (t) => {
       items.forEach((m, i) => {
         const z = ((t * 1.15 + i * 0.6) % 9) - 4.5;
@@ -500,9 +542,13 @@ const stream: SceneBuilder = (group, p) => {
         m.scale.setScalar(1 + poke * 0.5);
         if (m.userData.bad) m.rotation.z = Math.sin(t * 6 + i) * 0.22 + poke * 0.6;
       });
+      reader.update(t);
     },
-    targets: items,
-    hit: (object, t) => react.hit(object, t),
+    targets: [...items, ...reader.targets],
+    hit: (object, t) => {
+      if (reader.targets.includes(object)) reader.poke(t);
+      else react.hit(object, t);
+    },
   };
 };
 
@@ -510,17 +556,17 @@ const stream: SceneBuilder = (group, p) => {
  * Level 01 — the person: a core, a ring, and the work orbiting it.
  * ------------------------------------------------------------------ */
 const profile: SceneBuilder = (group, p) => {
-  const core = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(1.15, 1),
-    toon(p.accentDim),
-  );
-  group.add(core);
+  const me = character("dev", p, { tone: p.accent });
+  me.root.position.y = -1.4;
+  group.add(me.root);
+  const core = me.root;
   const shell = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(1.3, 1),
-    new THREE.MeshBasicMaterial({ color: p.accent, wireframe: true, transparent: true, opacity: 0.4 }),
+    new THREE.IcosahedronGeometry(1.45, 1),
+    new THREE.MeshBasicMaterial({ color: p.accent, wireframe: true, transparent: true, opacity: 0.22 }),
   );
+  shell.position.y = -0.25;
   group.add(shell);
-  floor(group, 2.1, -1.6);
+  floor(group, 1.5, -1.4);
 
   const ring = part(new THREE.TorusGeometry(2.15, 0.035, 8, 48), p.neutralDim, p.outline, 1.3);
   ring.rotation.x = Math.PI / 2.5;
@@ -540,13 +586,12 @@ const profile: SceneBuilder = (group, p) => {
   }
 
   return {
-    frame: { z: 6.5, y: 0 },
+    frame: { z: 6.0, y: -0.2 },
     tick: (t) => {
-      const corePoke = react.amount(core, t);
-      core.rotation.set(t * 0.18, t * 0.3, 0);
-      core.scale.setScalar(1 + corePoke * 0.3);
+      me.update(t);
+      core.rotation.y = Math.sin(t * 0.35) * 0.22;
       shell.rotation.set(-t * 0.12, -t * 0.2, 0);
-      shell.scale.setScalar(1 + Math.sin(t * 1.5) * 0.03 + corePoke * 0.4);
+      shell.scale.setScalar(1 + Math.sin(t * 1.5) * 0.03);
       ring.rotation.z = t * 0.14;
 
       cubes.forEach((cube, i) => {
@@ -558,8 +603,11 @@ const profile: SceneBuilder = (group, p) => {
         cube.scale.setScalar(1 + poke * 0.5);
       });
     },
-    targets: [core, ...cubes],
-    hit: (object, t) => react.hit(object, t),
+    targets: [...me.targets, ...cubes],
+    hit: (object, t) => {
+      if (me.targets.includes(object)) me.poke(t);
+      else react.hit(object, t);
+    },
   };
 };
 

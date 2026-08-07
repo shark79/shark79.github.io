@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import type { Palette } from "@/lib/scenes";
-import { bounce, contactShadow, part, toon } from "@/lib/toon";
+import { bounce, contactShadow, part } from "@/lib/toon";
 
 /**
  * Five agents as actual creatures: legs, arms, hands, a head, and one prop
@@ -21,7 +21,34 @@ export type Role =
   | "backend"
   | "frontend"
   | "qa"
-  | "adversary";
+  | "adversary"
+  | "buyer"
+  | "scout"
+  | "clinician"
+  | "dev";
+
+/** What it looks like and how it moves are separate choices. */
+export type Pose =
+  | "conduct"
+  | "type"
+  | "paint"
+  | "peer"
+  | "charge"
+  | "run"
+  | "point"
+  | "check";
+
+const DEFAULT_POSE: Record<Role, Pose> = {
+  orchestrator: "conduct",
+  backend: "type",
+  frontend: "paint",
+  qa: "peer",
+  adversary: "charge",
+  buyer: "run",
+  scout: "peer",
+  clinician: "check",
+  dev: "type",
+};
 
 type Rig = {
   root: THREE.Group;
@@ -44,7 +71,7 @@ function arm(len: number, tone: number, edge: number) {
     1.14,
   );
   upper.position.y = -len / 2 - 0.075;
-  const hand = part(new THREE.SphereGeometry(0.115, 12, 10), tone, edge, 1.12);
+  const hand = part(new THREE.SphereGeometry(0.115, 12, 10), tone);
   hand.position.y = -len - 0.16;
   pivot.add(upper, hand);
   return pivot;
@@ -54,12 +81,7 @@ function leg(len: number, tone: number, edge: number) {
   const pivot = new THREE.Group();
   const shin = part(new THREE.CapsuleGeometry(0.085, len, 4, 8), tone, edge, 1.13);
   shin.position.y = -len / 2 - 0.085;
-  const foot = part(
-    new THREE.SphereGeometry(0.125, 12, 10),
-    tone,
-    edge,
-    1.12,
-  );
+  const foot = part(new THREE.SphereGeometry(0.125, 12, 10), tone);
   foot.position.set(0, -len - 0.16, 0.06);
   foot.scale.set(1, 0.62, 1.35);
   pivot.add(shin, foot);
@@ -117,9 +139,16 @@ function base(p: Palette, tone: number, bulk = 1): Rig {
   return { root, bob, torso, head, armL, armR, legL, legR, eyes };
 }
 
-export function character(role: Role, p: Palette): Character {
+export function character(
+  role: Role,
+  p: Palette,
+  opts: { pose?: Pose; tone?: number } = {},
+): Character {
   const lead = role === "orchestrator";
-  const tone = lead ? p.accent : role === "backend" ? p.neutral : p.neutralDim;
+  const pose = opts.pose ?? DEFAULT_POSE[role];
+  const tone =
+    opts.tone ??
+    (lead ? p.accent : role === "backend" ? p.neutral : p.neutralDim);
   const bulk = role === "adversary" ? 1.28 : 1;
   const r = base(p, tone, bulk);
 
@@ -224,15 +253,24 @@ export function character(role: Role, p: Palette): Character {
     monocle.position.set(0.12, 0.04, 0.29);
     r.head.add(monocle);
 
-    const beard = part(
-      new THREE.SphereGeometry(0.22, 14, 12),
+    // A sphere behind the jaw read as a second chin. A cone hanging off the
+    // front of the face reads as a beard from any angle.
+    const beard = part(new THREE.ConeGeometry(0.23, 0.38, 14), p.neutral, p.outline, 1.06);
+    beard.position.set(0, -0.34, 0.14);
+    beard.rotation.x = -0.22;
+    beard.scale.set(1, 1, 0.72);
+    r.head.add(beard);
+
+    const tache = part(
+      new THREE.CapsuleGeometry(0.05, 0.2, 4, 8),
       p.neutral,
       p.outline,
-      1.08,
+      1.1,
     );
-    beard.position.set(0, -0.25, 0.12);
-    beard.scale.set(0.85, 0.75, 0.62);
-    r.head.add(beard);
+    tache.rotation.z = Math.PI / 2;
+    tache.position.set(0, -0.12, 0.27);
+    r.head.add(tache);
+    extras.push(tache);
 
     const brow = part(
       new THREE.BoxGeometry(0.34, 0.05, 0.06),
@@ -244,6 +282,46 @@ export function character(role: Role, p: Palette): Character {
     brow.rotation.z = 0.12;
     r.head.add(brow);
     extras.push(monocle, beard, brow);
+  }
+
+  if (role === "scout") {
+    // Magnifier: ring plus handle, held up at eye height.
+    const glass = part(new THREE.TorusGeometry(0.15, 0.03, 8, 20), p.accent, p.outline, 1.14);
+    const handle = part(
+      new THREE.CapsuleGeometry(0.028, 0.18, 4, 8),
+      p.neutral,
+      p.outline,
+      1.14,
+    );
+    handle.position.y = -0.24;
+    glass.add(handle);
+    glass.position.set(0, -0.62, 0.12);
+    r.armR.add(glass);
+    extras.push(glass);
+  }
+
+  if (role === "clinician") {
+    // Clipboard, held flat the way someone actually reads one.
+    const board = part(new THREE.BoxGeometry(0.34, 0.44, 0.03), p.neutral, p.outline, 1.07);
+    const clip = part(new THREE.BoxGeometry(0.16, 0.06, 0.05), p.accent, p.outline, 1.12);
+    clip.position.set(0, 0.2, 0.03);
+    board.add(clip);
+    board.position.set(0.02, -0.62, 0.16);
+    board.rotation.set(1.25, 0, 0.2);
+    r.armL.add(board);
+    extras.push(board);
+  }
+
+  if (role === "dev") {
+    // Laptop, open, tilted toward the face.
+    const lap = part(new THREE.BoxGeometry(0.44, 0.03, 0.32), p.neutral, p.outline, 1.07);
+    const lid = part(new THREE.BoxGeometry(0.44, 0.3, 0.03), p.accentDim, p.outline, 1.07);
+    lid.position.set(0, 0.15, -0.15);
+    lid.rotation.x = -0.35;
+    lap.add(lid);
+    lap.position.set(0, 0.92, 0.42);
+    r.bob.add(lap);
+    extras.push(lap);
   }
 
   if (role === "adversary") {
@@ -307,8 +385,8 @@ export function character(role: Role, p: Palette): Character {
       r.head.position.y = 1.62 + Math.sin(t * 1.9 + seed + 0.4) * 0.02;
 
       // Idle gait, distinct per role.
-      switch (role) {
-        case "orchestrator": {
+      switch (pose) {
+        case "conduct": {
           // Conducting: arms sweep out of phase, brain rings turn.
           r.armL.rotation.x = Math.sin(t * 1.5) * 0.55 - 0.3;
           r.armR.rotation.x = Math.sin(t * 1.5 + Math.PI) * 0.55 - 0.3;
@@ -320,7 +398,7 @@ export function character(role: Role, p: Palette): Character {
           });
           break;
         }
-        case "backend": {
+        case "type": {
           // Typing: fast, small, unbothered.
           r.armL.rotation.x = -1.15 + Math.sin(t * 11) * 0.14;
           r.armR.rotation.x = -1.15 + Math.sin(t * 11 + 1.7) * 0.14;
@@ -329,7 +407,7 @@ export function character(role: Role, p: Palette): Character {
           r.head.rotation.x = 0.28;
           break;
         }
-        case "frontend": {
+        case "paint": {
           // Painting: one long arc, head following the stroke.
           const stroke = Math.sin(t * 1.15);
           r.armR.rotation.x = -0.9 + stroke * 0.75;
@@ -340,7 +418,7 @@ export function character(role: Role, p: Palette): Character {
           r.head.rotation.y = stroke * 0.16;
           break;
         }
-        case "qa": {
+        case "peer": {
           // Leaning in and back out, looking for the flaw.
           const peer = (Math.sin(t * 0.9) + 1) / 2;
           r.bob.rotation.x = peer * 0.16;
@@ -351,7 +429,7 @@ export function character(role: Role, p: Palette): Character {
           r.head.rotation.y = Math.sin(t * 1.6) * 0.22;
           break;
         }
-        case "adversary": {
+        case "charge": {
           // Pawing the ground, horn dipping, cape alive.
           const paw = Math.sin(t * 2.4);
           r.legR.rotation.x = Math.max(0, paw) * 0.7;
@@ -364,6 +442,38 @@ export function character(role: Role, p: Palette): Character {
           cape.rotation.x = Math.sin(t * 2.1) * 0.18 - 0.1;
           break;
         }
+        case "run": {
+          // Legs and arms counter-swinging, body leaning into the run.
+          const stride = Math.sin(t * 7.5);
+          r.legL.rotation.x = stride * 0.85;
+          r.legR.rotation.x = -stride * 0.85;
+          r.armL.rotation.x = -stride * 0.75;
+          r.armR.rotation.x = stride * 0.75;
+          r.armL.rotation.z = 0.3;
+          r.armR.rotation.z = -0.3;
+          r.bob.rotation.x = 0.14;
+          break;
+        }
+        case "point": {
+          // One arm up at the thing worth looking at, the other on the hip.
+          r.armR.rotation.x = -2.45 + Math.sin(t * 2) * 0.1;
+          r.armR.rotation.z = -0.35;
+          r.armL.rotation.x = -0.2;
+          r.armL.rotation.z = 0.95;
+          r.head.rotation.x = -0.22;
+          r.head.rotation.y = Math.sin(t * 0.8) * 0.12;
+          break;
+        }
+        case "check": {
+          // Reading, then glancing up to compare against what is in front.
+          const glance = Math.sin(t * 0.8);
+          r.armL.rotation.x = -1.25;
+          r.armL.rotation.z = 0.45;
+          r.armR.rotation.x = -0.75 + Math.max(0, glance) * 0.5;
+          r.armR.rotation.z = -0.55;
+          r.head.rotation.x = 0.3 - Math.max(0, glance) * 0.5;
+          break;
+        }
       }
 
       // Reaction: squash, launch, and a signature flourish.
@@ -372,6 +482,12 @@ export function character(role: Role, p: Palette): Character {
         r.bob.scale.set(1 / squash, squash, 1 / squash);
         switch (role) {
           case "orchestrator":
+            r.bob.rotation.y = react * Math.PI * 2;
+            break;
+          case "scout":
+          case "clinician":
+          case "dev":
+          case "buyer":
             r.bob.rotation.y = react * Math.PI * 2;
             break;
           case "backend":
@@ -392,7 +508,7 @@ export function character(role: Role, p: Palette): Character {
         }
       } else {
         r.bob.scale.setScalar(1);
-        r.bob.rotation.set(role === "qa" ? r.bob.rotation.x : 0, 0, 0);
+        r.bob.rotation.set(pose === "peer" || pose === "run" ? r.bob.rotation.x : 0, 0, 0);
         r.head.scale.setScalar(1);
         r.bob.position.x = 0;
       }
