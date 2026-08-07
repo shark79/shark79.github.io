@@ -50,7 +50,7 @@ export function About() {
             <p>
               Right now I&apos;m an{" "}
               <strong className="font-medium text-foreground">
-                AI Developer at CMCI
+                AI Developer at DocAide.ai
               </strong>
               , doing the most demanding work of my career: clinical AI,
               where mistakes aren&apos;t an option and speed matters just as

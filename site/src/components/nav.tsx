@@ -3,6 +3,48 @@
 import * as React from "react";
 import { Menu, X } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { TOTAL_LEVELS, useCleared } from "@/lib/progress";
+
+const RING = 2 * Math.PI * 10;
+
+function LevelRing() {
+  const cleared = useCleared();
+  const done = cleared.length;
+
+  return (
+    <a
+      href="#work"
+      title={`${done} of ${TOTAL_LEVELS} levels cleared`}
+      className="flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
+    >
+      <svg viewBox="0 0 24 24" className="size-6 -rotate-90" aria-hidden="true">
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+          fill="none"
+          strokeWidth="2"
+          className="stroke-border"
+        />
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+          fill="none"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeDasharray={RING}
+          strokeDashoffset={RING * (1 - done / TOTAL_LEVELS)}
+          className="stroke-primary transition-[stroke-dashoffset] duration-700 ease-out"
+        />
+      </svg>
+      <span className="font-mono text-[10px] tabular-nums">
+        {done}/{TOTAL_LEVELS}
+      </span>
+      <span className="sr-only">levels cleared, jump to the work section</span>
+    </a>
+  );
+}
 
 const LINKS = [
   { href: "#about", label: "About" },
@@ -37,6 +79,7 @@ export function Nav() {
           ))}
         </ul>
         <div className="flex items-center gap-4">
+          <LevelRing />
           <ThemeToggle />
           <a
             href="#contact"

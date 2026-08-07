@@ -23,7 +23,7 @@ and deployed to GitHub Pages via GitHub Actions. Source lives in [`site/`](site/
 - **Tools showreel** — dual-row scrolling marquee of the stack actually used
 - **01 About** — bio, stats, education
 - **02 Work** — featured project stack + full project list
-- **03 Experience** — CMCI & ASU timeline
+- **03 Experience** — DocAide.ai & ASU timeline
 - **04 Skills** — GenAI/LLM, Models & APIs, AWS & Backend, Tools & Domain
 - **05 Gallery** — monochrome scrollable photo showreel
 - **Contact** — email, phone, LinkedIn, GitHub
