@@ -1,16 +1,17 @@
 import * as THREE from "three";
 import type { Palette } from "@/lib/scenes";
-import { bounce, contactShadow, part } from "@/lib/toon";
+import { contactShadow, part } from "@/lib/toon";
 
 /**
- * Five agents as actual creatures: legs, arms, hands, a head, and one prop
- * that says what the role is. Built from primitives so there is nothing to
- * download, rigged so they idle and react rather than sit there rotating.
+ * Minifigure construction: everything is a moulded block, not a soft shape.
+ * A tapered torso, a cylinder head with a stud on top, C-clamp hands, and
+ * legs that hinge off a hip block. Boxes and cylinders read as *built*,
+ * where capsules and spheres read as a cartoon blob.
  */
 
 export type Character = {
   root: THREE.Group;
-  /** Everything a tap may land on. */
+  /** One generous collider per creature — fingers are not laser pointers. */
   targets: THREE.Object3D[];
   update(t: number): void;
   poke(t: number): void;
@@ -27,7 +28,6 @@ export type Role =
   | "clinician"
   | "dev";
 
-/** What it looks like and how it moves are separate choices. */
 export type Pose =
   | "conduct"
   | "type"
@@ -50,6 +50,30 @@ const DEFAULT_POSE: Record<Role, Pose> = {
   dev: "type",
 };
 
+/** Emotes run four seconds, in beats, then hand back to the idle. */
+const EMOTE = 4;
+
+/** Progress through one beat of an emote, eased. */
+function beat(phase: number, from: number, to: number) {
+  if (phase <= from) return 0;
+  if (phase >= to) return 1;
+  const k = (phase - from) / (to - from);
+  return k * k * (3 - 2 * k);
+}
+
+/** Up and back down within a beat. */
+function pulse(phase: number, from: number, to: number) {
+  if (phase <= from || phase >= to) return 0;
+  return Math.sin(((phase - from) / (to - from)) * Math.PI);
+}
+
+/** A 4-sided cylinder is a trapezoid prism, which is the minifig torso. */
+function tapered(top: number, bottom: number, height: number) {
+  const g = new THREE.CylinderGeometry(top, bottom, height, 4);
+  g.rotateY(Math.PI / 4);
+  return g;
+}
+
 type Rig = {
   root: THREE.Group;
   bob: THREE.Group;
@@ -57,35 +81,56 @@ type Rig = {
   head: THREE.Group;
   armL: THREE.Group;
   armR: THREE.Group;
+  handL: THREE.Group;
+  handR: THREE.Group;
   legL: THREE.Group;
   legR: THREE.Group;
   eyes: THREE.Mesh[];
 };
 
-function arm(len: number, tone: number, edge: number) {
-  const pivot = new THREE.Group();
-  const upper = part(
-    new THREE.CapsuleGeometry(0.075, len, 4, 8),
+/** Upper arm, hinged forearm, C-clamp hand — the minifig arm exactly. */
+function armRig(tone: number, edge: number, flip: number) {
+  const shoulder = new THREE.Group();
+
+  const upper = part(new THREE.BoxGeometry(0.15, 0.28, 0.17), tone, edge, 1.09);
+  upper.position.y = -0.14;
+  upper.rotation.z = flip * -0.22;
+  shoulder.add(upper);
+
+  const elbow = new THREE.Group();
+  elbow.position.set(flip * 0.07, -0.27, 0);
+  shoulder.add(elbow);
+
+  const fore = part(new THREE.BoxGeometry(0.14, 0.25, 0.16), tone, edge, 1.09);
+  fore.position.y = -0.12;
+  elbow.add(fore);
+
+  const hand = new THREE.Group();
+  hand.position.y = -0.25;
+  elbow.add(hand);
+
+  // C-clamp: an open ring, the way a minifig grips.
+  const clamp = part(
+    new THREE.TorusGeometry(0.075, 0.032, 6, 12, Math.PI * 1.45),
     tone,
     edge,
-    1.14,
+    1.12,
   );
-  upper.position.y = -len / 2 - 0.075;
-  const hand = part(new THREE.SphereGeometry(0.115, 12, 10), tone);
-  hand.position.y = -len - 0.16;
-  pivot.add(upper, hand);
-  return pivot;
+  clamp.rotation.set(Math.PI / 2, 0, -0.5);
+  hand.add(clamp);
+
+  return { shoulder, hand };
 }
 
-function leg(len: number, tone: number, edge: number) {
-  const pivot = new THREE.Group();
-  const shin = part(new THREE.CapsuleGeometry(0.085, len, 4, 8), tone, edge, 1.13);
-  shin.position.y = -len / 2 - 0.085;
-  const foot = part(new THREE.SphereGeometry(0.125, 12, 10), tone);
-  foot.position.set(0, -len - 0.16, 0.06);
-  foot.scale.set(1, 0.62, 1.35);
-  pivot.add(shin, foot);
-  return pivot;
+function legRig(tone: number, edge: number) {
+  const hip = new THREE.Group();
+  const thigh = part(new THREE.BoxGeometry(0.21, 0.46, 0.26), tone, edge, 1.07);
+  thigh.position.y = -0.23;
+  hip.add(thigh);
+  const foot = part(new THREE.BoxGeometry(0.23, 0.1, 0.34), tone, edge, 1.07);
+  foot.position.set(0, -0.5, 0.04);
+  hip.add(foot);
+  return hip;
 }
 
 function base(p: Palette, tone: number, bulk = 1): Rig {
@@ -93,50 +138,70 @@ function base(p: Palette, tone: number, bulk = 1): Rig {
   const bob = new THREE.Group();
   root.add(bob);
 
-  const shadow = contactShadow(0.62 * bulk);
+  const shadow = contactShadow(0.6 * bulk);
   shadow.position.y = 0.01;
   root.add(shadow);
 
-  const torso = part(
-    new THREE.CapsuleGeometry(0.25 * bulk, 0.46, 5, 14),
-    tone,
-    p.outline,
-    1.08,
-  );
-  torso.position.y = 1.02;
+  // Hips: the block the legs hang off, wider than the waist above it.
+  const hips = part(new THREE.BoxGeometry(0.44 * bulk, 0.17, 0.3), tone, p.outline, 1.06);
+  hips.position.y = 0.66;
+  bob.add(hips);
+
+  const torso = part(tapered(0.23 * bulk, 0.33 * bulk, 0.6), tone, p.outline, 1.06);
+  torso.position.y = 1.04;
   bob.add(torso);
 
   const head = new THREE.Group();
-  head.position.y = 1.62;
+  head.position.y = 1.52;
   bob.add(head);
 
-  const skull = part(new THREE.SphereGeometry(0.31, 20, 16), tone, p.outline, 1.07);
+  const skull = part(new THREE.CylinderGeometry(0.2, 0.2, 0.34, 18), tone, p.outline, 1.06);
   head.add(skull);
+  // The stud. Nothing says moulded brick faster.
+  const stud = part(new THREE.CylinderGeometry(0.085, 0.085, 0.07, 14), tone, p.outline, 1.1);
+  stud.position.y = 0.2;
+  head.add(stud);
+  const neck = part(new THREE.CylinderGeometry(0.08, 0.08, 0.1, 12), tone);
+  neck.position.y = -0.2;
+  head.add(neck);
 
   const eyes: THREE.Mesh[] = [];
-  for (const x of [-0.12, 0.12]) {
+  for (const x of [-0.075, 0.075]) {
     const eye = new THREE.Mesh(
-      new THREE.SphereGeometry(0.055, 10, 8),
+      new THREE.CylinderGeometry(0.032, 0.032, 0.02, 10),
       new THREE.MeshBasicMaterial({ color: p.outline }),
     );
-    eye.position.set(x, 0.04, 0.27);
+    eye.rotation.x = Math.PI / 2;
+    eye.position.set(x, 0.03, 0.2);
     head.add(eye);
     eyes.push(eye);
   }
 
-  const armL = arm(0.4, tone, p.outline);
-  armL.position.set(-0.27 * bulk - 0.1, 1.3, 0.02);
-  const armR = arm(0.4, tone, p.outline);
-  armR.position.set(0.27 * bulk + 0.1, 1.3, 0.02);
-  bob.add(armL, armR);
+  const left = armRig(tone, p.outline, 1);
+  const right = armRig(tone, p.outline, -1);
+  left.shoulder.position.set(-0.28 * bulk, 1.28, 0);
+  right.shoulder.position.set(0.28 * bulk, 1.28, 0);
+  bob.add(left.shoulder, right.shoulder);
 
-  const legL = leg(0.3, tone, p.outline);
-  legL.position.set(-0.17, 0.74, 0);
-  const legR = leg(0.3, tone, p.outline);
-  legR.position.set(0.17, 0.74, 0);
+  const legL = legRig(tone, p.outline);
+  const legR = legRig(tone, p.outline);
+  legL.position.set(-0.115, 0.6, 0);
+  legR.position.set(0.115, 0.6, 0);
   bob.add(legL, legR);
 
-  return { root, bob, torso, head, armL, armR, legL, legR, eyes };
+  return {
+    root,
+    bob,
+    torso,
+    head,
+    armL: left.shoulder,
+    armR: right.shoulder,
+    handL: left.hand,
+    handR: right.hand,
+    legL,
+    legR,
+    eyes,
+  };
 }
 
 export function character(
@@ -149,374 +214,376 @@ export function character(
   const tone =
     opts.tone ??
     (lead ? p.accent : role === "backend" ? p.neutral : p.neutralDim);
-  const bulk = role === "adversary" ? 1.28 : 1;
+  const bulk = role === "adversary" ? 1.25 : 1;
   const r = base(p, tone, bulk);
-
-  // Props: one silhouette-defining object per role, nothing decorative.
   const extras: THREE.Object3D[] = [];
 
   if (role === "orchestrator") {
-    // Brain: folds wrapped over the skull, and a coordination ring above.
+    // Brain: lobes moulded over the head, plus the ring it works under.
+    // Ridges arcing front-to-back over the dome. Clustered rings on top just
+    // read as a hat brim; ridges over the skull read as a brain.
     for (let i = 0; i < 3; i++) {
-      const fold = part(
-        new THREE.TorusGeometry(0.3 - i * 0.02, 0.075, 8, 22),
+      const lobe = part(
+        new THREE.TorusGeometry(0.185 - i * 0.012, 0.036, 6, 14, Math.PI),
         p.accentDim,
         p.outline,
         1.1,
       );
-      fold.rotation.set(1.3 + i * 0.42, i * 0.75, 0.25);
-      fold.position.y = 0.16;
-      r.head.add(fold);
-      extras.push(fold);
+      lobe.rotation.set(0, Math.PI / 2, 0);
+      lobe.position.set((i - 1) * 0.105, 0.12, 0);
+      r.head.add(lobe);
+      extras.push(lobe);
     }
-    const halo = part(
-      new THREE.TorusGeometry(0.34, 0.028, 8, 28),
-      p.accent,
+    // Cap the crown so the ridges sit on something.
+    const dome = part(
+      new THREE.SphereGeometry(0.19, 16, 10, 0, Math.PI * 2, 0, Math.PI / 2),
+      p.accentDim,
       p.outline,
-      1.15,
+      1.06,
     );
+    dome.position.y = 0.12;
+    r.head.add(dome);
+    const halo = part(new THREE.TorusGeometry(0.28, 0.025, 6, 24), p.accent, p.outline, 1.14);
     halo.rotation.x = Math.PI / 2;
-    halo.position.y = 0.62;
+    halo.position.y = 0.52;
     r.head.add(halo);
     extras.push(halo);
   }
 
   if (role === "backend") {
-    // Skeleton: exposed ribs and hollow sockets.
-    for (let i = 0; i < 3; i++) {
+    // Ribcage printed on the torso front, the way a minifig torso is printed.
+    for (let i = 0; i < 4; i++) {
       const rib = new THREE.Mesh(
-        new THREE.BoxGeometry(0.34 - i * 0.05, 0.045, 0.04),
+        new THREE.BoxGeometry(0.3 - i * 0.045, 0.04, 0.03),
         new THREE.MeshBasicMaterial({ color: p.outline }),
       );
-      rib.position.set(0, 1.19 - i * 0.15, 0.245);
+      rib.position.set(0, 1.24 - i * 0.13, 0.17 - i * 0.006);
       r.bob.add(rib);
-      extras.push(rib);
     }
     const spine = new THREE.Mesh(
-      new THREE.BoxGeometry(0.05, 0.5, 0.04),
+      new THREE.BoxGeometry(0.045, 0.5, 0.03),
       new THREE.MeshBasicMaterial({ color: p.outline }),
     );
-    spine.position.set(0, 1.1, 0.245);
+    spine.position.set(0, 1.1, 0.17);
     r.bob.add(spine);
-    r.eyes.forEach((e) => e.scale.setScalar(1.5));
-    const jaw = part(
-      new THREE.BoxGeometry(0.26, 0.07, 0.16),
-      p.neutral,
-      p.outline,
-      1.1,
+    r.eyes.forEach((e) => e.scale.setScalar(1.7));
+    const jaw = new THREE.Mesh(
+      new THREE.BoxGeometry(0.18, 0.035, 0.02),
+      new THREE.MeshBasicMaterial({ color: p.outline }),
     );
-    jaw.position.set(0, -0.22, 0.18);
+    jaw.position.set(0, -0.09, 0.2);
     r.head.add(jaw);
-    extras.push(jaw);
   }
 
   if (role === "frontend") {
-    // Artist: beret, and a palette held out in one hand.
-    const beret = part(
-      new THREE.CylinderGeometry(0.3, 0.26, 0.1, 16),
-      p.accent,
-      p.outline,
-      1.1,
-    );
-    beret.position.set(0.02, 0.29, -0.02);
-    beret.rotation.z = -0.24;
-    const stalk = part(
-      new THREE.SphereGeometry(0.05, 8, 8),
-      p.accent,
-      p.outline,
-      1.2,
-    );
-    stalk.position.set(0.02, 0.37, -0.02);
+    const beret = part(new THREE.CylinderGeometry(0.25, 0.21, 0.08, 14), p.accent, p.outline, 1.08);
+    beret.position.set(0.02, 0.21, -0.01);
+    beret.rotation.z = -0.22;
+    const stalk = part(new THREE.CylinderGeometry(0.03, 0.03, 0.05, 8), p.accent, p.outline, 1.15);
+    stalk.position.set(0.02, 0.27, -0.01);
     r.head.add(beret, stalk);
 
-    const palette = part(
-      new THREE.CylinderGeometry(0.19, 0.19, 0.035, 16),
-      p.neutral,
-      p.outline,
-      1.1,
-    );
-    palette.rotation.set(1.35, 0, 0.35);
-    palette.position.set(-0.02, -0.62, 0.16);
-    palette.scale.set(1.15, 1, 1.15);
-    r.armL.add(palette);
+    const palette = part(new THREE.CylinderGeometry(0.17, 0.17, 0.03, 14), p.neutral, p.outline, 1.08);
+    palette.rotation.set(1.4, 0, 0.3);
+    palette.position.set(0, -0.06, 0.06);
+    r.handL.add(palette);
     extras.push(beret, palette);
   }
 
   if (role === "qa") {
-    // Old inspector: monocle on one eye, beard, permanent lean-in.
-    const monocle = part(
-      new THREE.TorusGeometry(0.1, 0.022, 8, 18),
-      p.accent,
-      p.outline,
-      1.18,
-    );
-    monocle.position.set(0.12, 0.04, 0.29);
+    const monocle = part(new THREE.TorusGeometry(0.062, 0.018, 6, 14), p.accent, p.outline, 1.16);
+    monocle.position.set(0.075, 0.03, 0.21);
     r.head.add(monocle);
+    const chain = new THREE.Mesh(
+      new THREE.BoxGeometry(0.012, 0.16, 0.012),
+      new THREE.MeshBasicMaterial({ color: p.outline }),
+    );
+    chain.position.set(0.13, -0.06, 0.19);
+    chain.rotation.z = 0.4;
+    r.head.add(chain);
 
-    // A sphere behind the jaw read as a second chin. A cone hanging off the
-    // front of the face reads as a beard from any angle.
-    const beard = part(new THREE.ConeGeometry(0.23, 0.38, 14), p.neutral, p.outline, 1.06);
-    beard.position.set(0, -0.34, 0.14);
-    beard.rotation.x = -0.22;
-    beard.scale.set(1, 1, 0.72);
+    const beard = part(tapered(0.06, 0.17, 0.3), p.neutral, p.outline, 1.06);
+    beard.position.set(0, -0.28, 0.09);
+    beard.scale.z = 0.72;
     r.head.add(beard);
 
-    const tache = part(
-      new THREE.CapsuleGeometry(0.05, 0.2, 4, 8),
-      p.neutral,
-      p.outline,
-      1.1,
-    );
-    tache.rotation.z = Math.PI / 2;
-    tache.position.set(0, -0.12, 0.27);
+    const tache = part(new THREE.BoxGeometry(0.19, 0.045, 0.05), p.neutral, p.outline, 1.09);
+    tache.position.set(0, -0.09, 0.2);
     r.head.add(tache);
-    extras.push(tache);
 
-    const brow = part(
-      new THREE.BoxGeometry(0.34, 0.05, 0.06),
-      p.neutral,
-      p.outline,
-      1.1,
+    const brow = new THREE.Mesh(
+      new THREE.BoxGeometry(0.28, 0.04, 0.04),
+      new THREE.MeshBasicMaterial({ color: p.outline }),
     );
-    brow.position.set(0, 0.17, 0.26);
-    brow.rotation.z = 0.12;
+    brow.position.set(0, 0.11, 0.2);
     r.head.add(brow);
-    extras.push(monocle, beard, brow);
+    extras.push(monocle, beard, tache);
   }
 
   if (role === "scout") {
-    // Magnifier: ring plus handle, held up at eye height.
-    const glass = part(new THREE.TorusGeometry(0.15, 0.03, 8, 20), p.accent, p.outline, 1.14);
-    const handle = part(
-      new THREE.CapsuleGeometry(0.028, 0.18, 4, 8),
-      p.neutral,
-      p.outline,
-      1.14,
-    );
-    handle.position.y = -0.24;
+    const glass = part(new THREE.TorusGeometry(0.13, 0.026, 6, 16), p.accent, p.outline, 1.12);
+    const handle = part(new THREE.BoxGeometry(0.035, 0.16, 0.035), p.neutral, p.outline, 1.12);
+    handle.position.y = -0.2;
     glass.add(handle);
-    glass.position.set(0, -0.62, 0.12);
-    r.armR.add(glass);
+    glass.position.set(0, 0.06, 0.02);
+    glass.rotation.x = 0.2;
+    r.handR.add(glass);
     extras.push(glass);
   }
 
   if (role === "clinician") {
-    // Clipboard, held flat the way someone actually reads one.
-    const board = part(new THREE.BoxGeometry(0.34, 0.44, 0.03), p.neutral, p.outline, 1.07);
-    const clip = part(new THREE.BoxGeometry(0.16, 0.06, 0.05), p.accent, p.outline, 1.12);
-    clip.position.set(0, 0.2, 0.03);
+    const board = part(new THREE.BoxGeometry(0.3, 0.4, 0.025), p.neutral, p.outline, 1.06);
+    const clip = part(new THREE.BoxGeometry(0.14, 0.05, 0.04), p.accent, p.outline, 1.1);
+    clip.position.set(0, 0.18, 0.03);
     board.add(clip);
-    board.position.set(0.02, -0.62, 0.16);
-    board.rotation.set(1.25, 0, 0.2);
-    r.armL.add(board);
+    board.position.set(0, 0.02, 0.1);
+    board.rotation.set(1.2, 0, 0.15);
+    r.handL.add(board);
     extras.push(board);
   }
 
   if (role === "dev") {
-    // Laptop, open, tilted toward the face.
-    const lap = part(new THREE.BoxGeometry(0.44, 0.03, 0.32), p.neutral, p.outline, 1.07);
-    const lid = part(new THREE.BoxGeometry(0.44, 0.3, 0.03), p.accentDim, p.outline, 1.07);
-    lid.position.set(0, 0.15, -0.15);
-    lid.rotation.x = -0.35;
+    const lap = part(new THREE.BoxGeometry(0.4, 0.03, 0.28), p.neutral, p.outline, 1.06);
+    const lid = part(new THREE.BoxGeometry(0.4, 0.26, 0.025), p.accentDim, p.outline, 1.06);
+    lid.position.set(0, 0.13, -0.13);
+    lid.rotation.x = -0.32;
     lap.add(lid);
-    lap.position.set(0, 0.92, 0.42);
+    lap.position.set(0, 0.94, 0.36);
     r.bob.add(lap);
     extras.push(lap);
   }
 
   if (role === "adversary") {
-    // Rhino: horn, ears, hunched forward, cape trailing behind.
-    const horn = part(
-      new THREE.ConeGeometry(0.11, 0.42, 12),
-      p.accent,
-      p.outline,
-      1.12,
-    );
-    horn.position.set(0, 0.12, 0.32);
-    horn.rotation.x = -0.28;
-    horn.scale.setScalar(1.2);
+    const horn = part(new THREE.ConeGeometry(0.075, 0.32, 10), p.accent, p.outline, 1.12);
+    horn.position.set(0, 0.08, 0.21);
+    horn.rotation.x = -0.3;
     r.head.add(horn);
 
-    for (const x of [-0.24, 0.24]) {
-      const ear = part(
-        new THREE.ConeGeometry(0.075, 0.17, 8),
-        p.neutralDim,
-        p.outline,
-        1.14,
-      );
-      ear.position.set(x, 0.26, 0);
+    for (const x of [-0.17, 0.17]) {
+      const ear = part(new THREE.ConeGeometry(0.055, 0.14, 6), p.neutralDim, p.outline, 1.14);
+      ear.position.set(x, 0.19, 0);
       r.head.add(ear);
-      extras.push(ear);
     }
 
-    const cape = part(
-      new THREE.PlaneGeometry(0.88, 0.92, 1, 1),
-      p.accentDim,
-      p.outline,
-      1.02,
-    );
+    const cape = part(new THREE.PlaneGeometry(0.8, 0.86), p.accentDim, p.outline, 1.02);
     (cape.material as THREE.MeshToonMaterial).side = THREE.DoubleSide;
-    cape.position.set(0, 1.04, -0.36);
+    cape.position.set(0, 1.06, -0.26);
     r.bob.add(cape);
-
-    r.head.rotation.x = 0.22;
-    r.torso.rotation.x = 0.16;
     extras.push(horn, cape);
   }
 
+  // One invisible collider around the whole creature. A finger on a phone
+  // cannot reliably hit a 0.15-unit forearm, and it should not have to.
+  const collider = new THREE.Mesh(
+    new THREE.BoxGeometry(1.15 * bulk, 2.1, 0.9),
+    new THREE.MeshBasicMaterial({ visible: false }),
+  );
+  collider.position.y = 1.0;
+  r.bob.add(collider);
+
   let pokedAt = -99;
-  const seed = role.charCodeAt(0);
+  const seed = role.charCodeAt(0) + role.length;
 
   return {
     root: r.root,
-    targets: [r.torso, ...r.head.children, ...extras],
+    targets: [collider],
     poke(t) {
       pokedAt = t;
     },
     update(t) {
       const since = t - pokedAt;
-      const reacting = since >= 0 && since < 1.1;
-      const react = reacting ? bounce(since / 1.1) : 0;
+      const emoting = since >= 0 && since < EMOTE;
+      const ph = emoting ? since / EMOTE : 0;
 
-      // Breathing, always. A still character reads as a prop.
-      const breath = Math.sin(t * 1.9 + seed) * 0.028;
-      r.torso.scale.set(1 - breath * 0.6, 1 + breath, 1 - breath * 0.6);
-      r.bob.position.y = Math.sin(t * 1.9 + seed) * 0.035 + react * 0.55;
-      r.head.position.y = 1.62 + Math.sin(t * 1.9 + seed + 0.4) * 0.02;
+      // Reset every joint an emote may have moved, so the idle never
+      // inherits half a pose when the four seconds are up.
+      r.bob.rotation.set(0, 0, 0);
+      r.bob.position.x = 0;
+      r.bob.position.z = 0;
+      r.head.rotation.set(0, 0, 0);
+      r.armL.rotation.set(0, 0, 0);
+      r.armR.rotation.set(0, 0, 0);
+      r.legL.rotation.set(0, 0, 0);
+      r.legR.rotation.set(0, 0, 0);
 
-      // Idle gait, distinct per role.
-      switch (pose) {
-        case "conduct": {
-          // Conducting: arms sweep out of phase, brain rings turn.
-          r.armL.rotation.x = Math.sin(t * 1.5) * 0.55 - 0.3;
-          r.armR.rotation.x = Math.sin(t * 1.5 + Math.PI) * 0.55 - 0.3;
-          r.armL.rotation.z = 0.35;
-          r.armR.rotation.z = -0.35;
-          r.head.rotation.y = Math.sin(t * 0.7) * 0.3;
-          extras.forEach((e, i) => {
-            e.rotation.z += 0.004 * (i + 1);
-          });
-          break;
-        }
-        case "type": {
-          // Typing: fast, small, unbothered.
-          r.armL.rotation.x = -1.15 + Math.sin(t * 11) * 0.14;
-          r.armR.rotation.x = -1.15 + Math.sin(t * 11 + 1.7) * 0.14;
-          r.armL.rotation.z = 0.5;
-          r.armR.rotation.z = -0.5;
-          r.head.rotation.x = 0.28;
-          break;
-        }
-        case "paint": {
-          // Painting: one long arc, head following the stroke.
-          const stroke = Math.sin(t * 1.15);
-          r.armR.rotation.x = -0.9 + stroke * 0.75;
-          r.armR.rotation.z = -0.5 + stroke * 0.3;
-          r.armL.rotation.x = -0.55;
-          r.armL.rotation.z = 0.7;
-          r.head.rotation.z = stroke * 0.1;
-          r.head.rotation.y = stroke * 0.16;
-          break;
-        }
-        case "peer": {
-          // Leaning in and back out, looking for the flaw.
-          const peer = (Math.sin(t * 0.9) + 1) / 2;
-          r.bob.rotation.x = peer * 0.16;
-          r.bob.position.z = peer * 0.22;
-          r.armR.rotation.x = -1.35;
-          r.armR.rotation.z = -0.75;
-          r.armL.rotation.x = 0.18;
-          r.head.rotation.y = Math.sin(t * 1.6) * 0.22;
-          break;
-        }
-        case "charge": {
-          // Pawing the ground, horn dipping, cape alive.
-          const paw = Math.sin(t * 2.4);
-          r.legR.rotation.x = Math.max(0, paw) * 0.7;
-          r.armL.rotation.x = -0.35 + paw * 0.2;
-          r.armR.rotation.x = -0.35 - paw * 0.2;
-          r.armL.rotation.z = 0.55;
-          r.armR.rotation.z = -0.55;
-          r.head.rotation.x = 0.22 + Math.max(0, -paw) * 0.22;
-          const cape = extras[extras.length - 1];
-          cape.rotation.x = Math.sin(t * 2.1) * 0.18 - 0.1;
-          break;
-        }
-        case "run": {
-          // Legs and arms counter-swinging, body leaning into the run.
-          const stride = Math.sin(t * 7.5);
-          r.legL.rotation.x = stride * 0.85;
-          r.legR.rotation.x = -stride * 0.85;
-          r.armL.rotation.x = -stride * 0.75;
-          r.armR.rotation.x = stride * 0.75;
-          r.armL.rotation.z = 0.3;
-          r.armR.rotation.z = -0.3;
-          r.bob.rotation.x = 0.14;
-          break;
-        }
-        case "point": {
-          // One arm up at the thing worth looking at, the other on the hip.
-          r.armR.rotation.x = -2.45 + Math.sin(t * 2) * 0.1;
-          r.armR.rotation.z = -0.35;
-          r.armL.rotation.x = -0.2;
-          r.armL.rotation.z = 0.95;
-          r.head.rotation.x = -0.22;
-          r.head.rotation.y = Math.sin(t * 0.8) * 0.12;
-          break;
-        }
-        case "check": {
-          // Reading, then glancing up to compare against what is in front.
-          const glance = Math.sin(t * 0.8);
-          r.armL.rotation.x = -1.25;
-          r.armL.rotation.z = 0.45;
-          r.armR.rotation.x = -0.75 + Math.max(0, glance) * 0.5;
-          r.armR.rotation.z = -0.55;
-          r.head.rotation.x = 0.3 - Math.max(0, glance) * 0.5;
-          break;
-        }
-      }
+      const breathe = Math.sin(t * 1.9 + seed) * 0.02;
+      r.bob.position.y = Math.sin(t * 1.9 + seed) * 0.03;
+      r.torso.scale.y = 1 + breathe;
 
-      // Reaction: squash, launch, and a signature flourish.
-      if (reacting) {
-        const squash = 1 + react * 0.22;
-        r.bob.scale.set(1 / squash, squash, 1 / squash);
-        switch (role) {
-          case "orchestrator":
-            r.bob.rotation.y = react * Math.PI * 2;
+      if (!emoting) {
+        switch (pose) {
+          case "conduct":
+            r.armL.rotation.x = Math.sin(t * 1.5) * 0.5 - 0.35;
+            r.armR.rotation.x = Math.sin(t * 1.5 + Math.PI) * 0.5 - 0.35;
+            r.armL.rotation.z = 0.3;
+            r.armR.rotation.z = -0.3;
+            r.head.rotation.y = Math.sin(t * 0.7) * 0.25;
             break;
-          case "scout":
-          case "clinician":
-          case "dev":
-          case "buyer":
-            r.bob.rotation.y = react * Math.PI * 2;
+          case "type":
+            r.armL.rotation.x = -1.1 + Math.sin(t * 10) * 0.12;
+            r.armR.rotation.x = -1.1 + Math.sin(t * 10 + 1.7) * 0.12;
+            r.armL.rotation.z = 0.42;
+            r.armR.rotation.z = -0.42;
+            r.head.rotation.x = 0.24;
             break;
-          case "backend":
-            r.bob.position.x = Math.sin(since * 46) * 0.05 * (1 - react);
+          case "paint": {
+            const stroke = Math.sin(t * 1.15);
+            r.armR.rotation.x = -0.85 + stroke * 0.7;
+            r.armR.rotation.z = -0.45 + stroke * 0.28;
+            r.armL.rotation.x = -0.5;
+            r.armL.rotation.z = 0.62;
+            r.head.rotation.z = stroke * 0.08;
             break;
-          case "frontend":
-            r.armR.rotation.x = -2.4 * react;
-            r.bob.rotation.z = -react * 0.4;
+          }
+          case "peer": {
+            const lean = (Math.sin(t * 0.9) + 1) / 2;
+            r.bob.rotation.x = lean * 0.15;
+            r.bob.position.z = lean * 0.2;
+            r.armR.rotation.x = -1.3;
+            r.armR.rotation.z = -0.6;
+            r.armL.rotation.x = 0.15;
+            r.head.rotation.y = Math.sin(t * 1.6) * 0.18;
             break;
-          case "qa":
-            r.head.scale.setScalar(1 + react * 0.3);
-            r.bob.rotation.x = -react * 0.3;
+          }
+          case "charge": {
+            const paw = Math.sin(t * 2.4);
+            r.legR.rotation.x = Math.max(0, paw) * 0.6;
+            r.armL.rotation.x = -0.3 + paw * 0.18;
+            r.armR.rotation.x = -0.3 - paw * 0.18;
+            r.armL.rotation.z = 0.42;
+            r.armR.rotation.z = -0.42;
+            r.head.rotation.x = 0.2 + Math.max(0, -paw) * 0.2;
             break;
-          case "adversary":
-            r.bob.position.z = react * 0.9;
-            r.bob.rotation.x = react * 0.35;
+          }
+          case "run": {
+            const stride = Math.sin(t * 7.5);
+            r.legL.rotation.x = stride * 0.8;
+            r.legR.rotation.x = -stride * 0.8;
+            r.armL.rotation.x = -stride * 0.7;
+            r.armR.rotation.x = stride * 0.7;
+            r.bob.rotation.x = 0.12;
             break;
+          }
+          case "point":
+            r.armR.rotation.x = -2.4 + Math.sin(t * 2) * 0.08;
+            r.armR.rotation.z = -0.3;
+            r.armL.rotation.x = -0.15;
+            r.armL.rotation.z = 0.85;
+            r.head.rotation.x = -0.2;
+            break;
+          case "check": {
+            const glance = Math.sin(t * 0.8);
+            r.armL.rotation.x = -1.2;
+            r.armL.rotation.z = 0.4;
+            r.armR.rotation.x = -0.7 + Math.max(0, glance) * 0.45;
+            r.armR.rotation.z = -0.5;
+            r.head.rotation.x = 0.28 - Math.max(0, glance) * 0.45;
+            break;
+          }
         }
       } else {
-        r.bob.scale.setScalar(1);
-        r.bob.rotation.set(pose === "peer" || pose === "run" ? r.bob.rotation.x : 0, 0, 0);
-        r.head.scale.setScalar(1);
-        r.bob.position.x = 0;
+        // Four seconds, in beats. A named move, not a squash.
+        switch (role) {
+          case "orchestrator":
+          case "dev": {
+            // Take a bow: arms up, sweep down, hold, straighten.
+            const up = beat(ph, 0, 0.2);
+            const bow = beat(ph, 0.25, 0.5) - beat(ph, 0.7, 0.9);
+            r.armL.rotation.x = -2.6 * up + bow * 1.4;
+            r.armR.rotation.x = -2.6 * up + bow * 1.4;
+            r.armL.rotation.z = 0.5 * up;
+            r.armR.rotation.z = -0.5 * up;
+            r.bob.rotation.x = bow * 0.85;
+            r.head.rotation.x = bow * 0.3;
+            break;
+          }
+          case "backend": {
+            // Skeleton dance: hips swivel, arms alternate overhead.
+            const on = beat(ph, 0, 0.12) - beat(ph, 0.88, 1);
+            const swing = Math.sin(ph * Math.PI * 12);
+            r.bob.rotation.y = swing * 0.5 * on;
+            r.armL.rotation.x = (-2.5 + swing * 0.9) * on;
+            r.armR.rotation.x = (-2.5 - swing * 0.9) * on;
+            r.armL.rotation.z = 0.7 * on;
+            r.armR.rotation.z = -0.7 * on;
+            r.legL.rotation.x = swing * 0.4 * on;
+            r.legR.rotation.x = -swing * 0.4 * on;
+            r.bob.position.y += Math.abs(swing) * 0.12 * on;
+            break;
+          }
+          case "frontend": {
+            // Big brush arc across an invisible canvas, then present it.
+            const arc = beat(ph, 0.05, 0.45);
+            const present = beat(ph, 0.55, 0.75);
+            r.armR.rotation.x = -0.6 - arc * 1.9;
+            r.armR.rotation.z = -0.4 + Math.sin(arc * Math.PI * 2) * 0.8;
+            r.armL.rotation.x = -0.5 - present * 1.6;
+            r.armL.rotation.z = 0.6 + present * 0.5;
+            r.bob.rotation.y = present * 0.4;
+            r.head.rotation.y = present * 0.35;
+            break;
+          }
+          case "qa":
+          case "scout": {
+            // Raise the glass, lean right in, then nod twice.
+            const raise = beat(ph, 0, 0.2);
+            const lean = beat(ph, 0.2, 0.45) - beat(ph, 0.75, 0.95);
+            const nod = Math.sin(ph * Math.PI * 8) * beat(ph, 0.5, 0.72);
+            r.armR.rotation.x = -1.3 - raise * 0.9;
+            r.armR.rotation.z = -0.5;
+            r.bob.rotation.x = lean * 0.4;
+            r.bob.position.z = lean * 0.45;
+            r.head.rotation.x = nod * 0.3;
+            break;
+          }
+          case "adversary": {
+            // Paw, charge, stomp, back off.
+            const wind = pulse(ph, 0, 0.25);
+            const dash = beat(ph, 0.28, 0.42) - beat(ph, 0.62, 0.9);
+            const stomp = pulse(ph, 0.42, 0.55);
+            r.legR.rotation.x = wind * 1.1;
+            r.bob.position.z = dash * 1.3;
+            r.bob.rotation.x = dash * 0.4 + stomp * 0.2;
+            r.head.rotation.x = 0.3 - stomp * 0.9;
+            r.armL.rotation.x = -0.6 - dash * 0.8;
+            r.armR.rotation.x = -0.6 - dash * 0.8;
+            r.armL.rotation.z = 0.6;
+            r.armR.rotation.z = -0.6;
+            break;
+          }
+          case "buyer": {
+            // Victory: jump, fist pump, spin on the landing.
+            const jump = pulse(ph, 0, 0.35);
+            const pump = Math.max(0, Math.sin(ph * Math.PI * 6)) * beat(ph, 0.15, 0.4);
+            r.bob.position.y += jump * 0.7;
+            r.armR.rotation.x = -1.2 - pump * 1.5;
+            r.armR.rotation.z = -0.4;
+            r.armL.rotation.x = -0.4;
+            r.armL.rotation.z = 0.4;
+            r.legL.rotation.x = jump * 0.6;
+            r.legR.rotation.x = jump * 0.6;
+            r.bob.rotation.y = beat(ph, 0.5, 0.85) * Math.PI * 2;
+            break;
+          }
+          case "clinician": {
+            // Flip the page, tap it, look up and nod.
+            const flip = pulse(ph, 0, 0.25);
+            const tap = Math.max(0, Math.sin(ph * Math.PI * 10)) * beat(ph, 0.3, 0.55);
+            const up = beat(ph, 0.6, 0.8);
+            r.armL.rotation.x = -1.2 - flip * 0.5;
+            r.armL.rotation.z = 0.4;
+            r.armR.rotation.x = -1.1 - tap * 0.5;
+            r.armR.rotation.z = -0.5;
+            r.head.rotation.x = 0.3 - up * 0.6;
+            r.head.rotation.y = up * 0.3;
+            break;
+          }
+        }
       }
 
-      // Blink, on an irregular beat so it never looks metronomic.
-      const blink = Math.sin(t * 1.3 + seed) > 0.985 ? 0.12 : 1;
+      const blink = Math.sin(t * 1.3 + seed) > 0.985 ? 0.1 : 1;
       r.eyes.forEach((e) => {
-        e.scale.y = blink * (role === "backend" ? 1.5 : 1);
+        e.scale.z = blink;
       });
     },
   };

@@ -167,25 +167,61 @@ export function LevelStage({ scene, cleared = false, className }: Props) {
     // so the stage stays inert (and non-blocking) when there is nothing to hit.
     const raycaster = new THREE.Raycaster();
     const pointer = new THREE.Vector2();
-    const onPointer = (event: PointerEvent) => {
+    const world = new THREE.Vector3();
+    const tap = (clientX: number, clientY: number) => {
       if (!handle.targets?.length || !handle.hit) return;
       const rect = renderer.domElement.getBoundingClientRect();
-      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
-      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      pointer.x = ((clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((clientY - rect.top) / rect.height) * 2 + 1;
       raycaster.setFromCamera(pointer, camera);
+
       const struck = raycaster.intersectObjects(handle.targets, true)[0];
-      if (struck) handle.hit(struck.object, clock.getElapsedTime());
+      if (struck) {
+        handle.hit(struck.object, clock.getElapsedTime());
+        return;
+      }
+
+      // A finger is about 44px wide and these subjects are small. If the ray
+      // missed, take the nearest target within a thumb's reach on screen
+      // rather than doing nothing — a tap that lands near a creature clearly
+      // meant that creature.
+      const reach = 44;
+      let best: THREE.Object3D | null = null;
+      let bestDistance = reach;
+      for (const target of handle.targets) {
+        target.getWorldPosition(world).project(camera);
+        const sx = ((world.x + 1) / 2) * rect.width;
+        const sy = ((1 - world.y) / 2) * rect.height;
+        const d = Math.hypot(sx - (clientX - rect.left), sy - (clientY - rect.top));
+        if (d < bestDistance) {
+          bestDistance = d;
+          best = target;
+        }
+      }
+      if (best) handle.hit(best, clock.getElapsedTime());
+    };
+
+    const onPointer = (event: PointerEvent) => tap(event.clientX, event.clientY);
+    // Safari on iOS has shipped pointer events for years, but a touchstart
+    // fallback costs nothing and removes the whole class of "nothing happens
+    // on my phone".
+    const onTouch = (event: TouchEvent) => {
+      const t0 = event.changedTouches[0];
+      if (t0) tap(t0.clientX, t0.clientY);
     };
     if (handle.targets?.length) {
       host.style.pointerEvents = "auto";
       host.style.cursor = "pointer";
+      host.style.touchAction = "manipulation";
       host.addEventListener("pointerdown", onPointer);
+      host.addEventListener("touchstart", onTouch, { passive: true });
     }
 
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", resize);
       host.removeEventListener("pointerdown", onPointer);
+      host.removeEventListener("touchstart", onTouch);
       // Give the canvas back, but keep the context alive for the next level.
       if (renderer.domElement.parentElement === host) {
         host.removeChild(renderer.domElement);

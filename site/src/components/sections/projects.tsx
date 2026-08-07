@@ -363,12 +363,25 @@ export function Projects() {
   const playing = mode === "play";
   const here = PROJECTS.filter((p) => cleared.includes(p.id)).length;
 
+  /** Scroll a row to just below the fixed header, not to the viewport top. */
+  const bringIntoView = (id: string) => {
+    const el = rowRefs.current[id];
+    if (!el) return;
+    const top = el.getBoundingClientRect().top + window.scrollY - 84;
+    window.scrollTo({ top, behavior: "smooth" });
+  };
+
+  const toggle = (id: string, isOpen: boolean) => {
+    setOpen(isOpen ? null : id);
+    if (!isOpen) {
+      // Wait for the panel to lay out before measuring where the row landed.
+      window.requestAnimationFrame(() => bringIntoView(id));
+    }
+  };
+
   const goToProject = (id: string) => {
     setOpen(id);
-    const el = rowRefs.current[id];
-    if (el) {
-      el.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
+    window.requestAnimationFrame(() => bringIntoView(id));
     setHighlighted(id);
     window.setTimeout(() => {
       setHighlighted((current) => (current === id ? null : current));
@@ -425,7 +438,7 @@ export function Projects() {
               >
                 <button
                   type="button"
-                  onClick={() => setOpen(isOpen ? null : p.id)}
+                  onClick={() => toggle(p.id, isOpen)}
                   aria-expanded={isOpen}
                   className="group w-full py-7 text-left"
                 >

@@ -99,7 +99,7 @@ const agents: SceneBuilder = (group, p) => {
   cast.forEach((c) => c.targets.forEach((o) => owner.set(o, c)));
 
   return {
-    frame: { z: 4.7, y: 0.62 },
+    frame: { z: 5.1, y: -0.12 },
     tick: (t) => cast.forEach((c) => c.update(t)),
     targets,
     hit: (object, t) => {
