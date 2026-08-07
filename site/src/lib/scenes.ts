@@ -1,24 +1,29 @@
 import * as THREE from "three";
+import { bounce, contactShadow, part, toon } from "@/lib/toon";
+import { character, type Role } from "@/lib/characters";
 
 /**
  * One accent hue and neutrals, nothing else — the 3D has to read as part of
  * the same site, not a toy dropped on top of it. Two sets so the scenes stay
- * legible against a near-black and a near-white background.
+ * legible against a near-black and a near-white background, plus a dedicated
+ * outline tone, which is what does most of the work.
  */
 export const PALETTES = {
   dark: {
     accent: 0x9a8bff,
     accentDim: 0x6f61c8,
     neutral: 0xe8e8ea,
-    neutralDim: 0x7a7a80,
+    neutralDim: 0x8b8b95,
     deep: 0x3a3a44,
+    outline: 0x16161c,
   },
   light: {
     accent: 0x6d4df6,
     accentDim: 0x9c8bf5,
-    neutral: 0x2a2a2e,
+    neutral: 0x3a3a42,
     neutralDim: 0x8e8e96,
     deep: 0xc9c9d2,
+    outline: 0x1c1c22,
   },
 } as const;
 
@@ -28,367 +33,533 @@ export type Palette = {
   neutral: number;
   neutralDim: number;
   deep: number;
+  outline: number;
 };
-export type Tick = (t: number) => void;
-export type SceneBuilder = (group: THREE.Group, p: Palette) => Tick;
 
-// Lambert, not Standard: per-vertex lighting instead of a full PBR fragment
-// shader. At these sizes the two are indistinguishable and this one is far
-// cheaper to fill, which is most of what makes the scenes safe on a phone.
-const solid = (color: number, opacity = 1) =>
-  new THREE.MeshLambertMaterial({
-    color,
-    transparent: opacity < 1,
-    opacity,
-  });
+export type Handle = {
+  tick: (t: number) => void;
+  /** How close to sit and what height to look at. Framing is most of it. */
+  frame?: { z: number; y: number };
+  /** Objects a tap can land on, and what to do when one is hit. */
+  targets?: THREE.Object3D[];
+  hit?: (object: THREE.Object3D, t: number) => void;
+};
 
-const glow = (color: number) =>
-  new THREE.MeshBasicMaterial({ color, transparent: true, opacity: 0.9 });
+export type SceneBuilder = (group: THREE.Group, p: Palette) => Handle;
 
-/** Level 02 — five agents with distinct roles, passing work between them. */
+/** Everything sits on the same implied floor, which is half the grounding. */
+function floor(group: THREE.Group, radius: number, y = -1.15) {
+  const blob = contactShadow(radius);
+  blob.position.y = y;
+  blob.material.opacity = 0.4;
+  group.add(blob);
+  return blob;
+}
+
+/** Shared "poke it and it responds" bookkeeping. */
+function reactor() {
+  const poked = new Map<THREE.Object3D, number>();
+  return {
+    hit(object: THREE.Object3D, t: number) {
+      poked.set(object, t);
+    },
+    amount(object: THREE.Object3D, t: number, dur = 0.9) {
+      const at = poked.get(object);
+      if (at === undefined) return 0;
+      const since = t - at;
+      return since >= 0 && since < dur ? bounce(since / dur) : 0;
+    },
+  };
+}
+
+/* ------------------------------------------------------------------ *
+ * Level 02 — the agent team, as five creatures.
+ * ------------------------------------------------------------------ */
 const agents: SceneBuilder = (group, p) => {
-  const roles: { marker: THREE.BufferGeometry; accent: boolean }[] = [
-    { marker: new THREE.OctahedronGeometry(0.28), accent: true }, // orchestrator
-    { marker: new THREE.BoxGeometry(0.42, 0.42, 0.42), accent: false }, // backend
-    { marker: new THREE.PlaneGeometry(0.55, 0.4), accent: false }, // frontend
-    { marker: new THREE.TorusGeometry(0.22, 0.07, 8, 20), accent: false }, // qa
-    { marker: new THREE.ConeGeometry(0.26, 0.5, 16), accent: false }, // adversary
+  const roles: Role[] = [
+    "backend",
+    "frontend",
+    "orchestrator",
+    "qa",
+    "adversary",
   ];
-
-  const bodies: THREE.Group[] = [];
-  roles.forEach((role, i) => {
-    const lead = i === 0;
-    const figure = new THREE.Group();
-    const tone = lead ? p.accent : p.neutralDim;
-
-    const body = new THREE.Mesh(
-      new THREE.CapsuleGeometry(0.24, lead ? 0.62 : 0.5, 4, 12),
-      solid(lead ? p.accentDim : p.deep),
-    );
-    const head = new THREE.Mesh(
-      new THREE.SphereGeometry(0.2, 18, 14),
-      solid(tone),
-    );
-    head.position.y = lead ? 0.68 : 0.6;
-    const marker = new THREE.Mesh(role.marker, solid(tone));
-    marker.position.y = lead ? 1.15 : 1.02;
-
-    figure.add(body, head, marker);
-    // Orchestrator centre-front, the four workers in an arc behind it.
-    if (lead) {
-      figure.position.set(0, 0.1, 1.1);
-      figure.scale.setScalar(1.15);
-    } else {
-      const a = (-0.9 + (i - 1) * 0.6) * 1.0;
-      figure.position.set(Math.sin(a) * 2.6, 0, Math.cos(a) * 2.6 - 1.2);
-    }
-    group.add(figure);
-    bodies.push(figure);
+  const cast = roles.map((role, i) => {
+    const c = character(role, p);
+    const lead = role === "orchestrator";
+    const x = (i - 2) * 1.2;
+    c.root.position.set(x, -1.15, lead ? 0.55 : 0);
+    c.root.rotation.y = -x * 0.11;
+    if (lead) c.root.scale.setScalar(1.12);
+    group.add(c.root);
+    return c;
   });
 
-  // The task token: leaves the orchestrator, visits a worker, comes back.
-  const token = new THREE.Mesh(new THREE.SphereGeometry(0.13, 14, 12), glow(p.accent));
-  group.add(token);
+  const targets = cast.flatMap((c) => c.targets);
+  const owner = new Map<THREE.Object3D, (typeof cast)[number]>();
+  cast.forEach((c) => c.targets.forEach((o) => owner.set(o, c)));
 
-  return (t) => {
-    bodies.forEach((f, i) => {
-      f.position.y = (i === 0 ? 0.1 : 0) + Math.sin(t * 1.6 + i) * 0.07;
-      f.rotation.y = Math.sin(t * 0.5 + i * 1.4) * 0.35;
-    });
-    const leg = (t * 0.45) % 4;
-    const target = bodies[1 + Math.floor(leg)];
-    const k = leg % 1;
-    const out = Math.sin(k * Math.PI); // go and come back
-    token.position.lerpVectors(
-      bodies[0].position,
-      target.position,
-      out,
-    );
-    token.position.y += 1.25 + Math.sin(k * Math.PI) * 0.5;
-    const s = 0.8 + out * 0.5;
-    token.scale.setScalar(s);
+  return {
+    frame: { z: 4.7, y: 0.62 },
+    tick: (t) => cast.forEach((c) => c.update(t)),
+    targets,
+    hit: (object, t) => {
+      // Tapping any part of a creature pokes the whole creature.
+      let node: THREE.Object3D | null = object;
+      while (node && !owner.has(node)) node = node.parent;
+      if (node) owner.get(node)!.poke(t);
+    },
   };
 };
 
-/** Level 03 — a seat block, two requests racing for the same seat. */
+/* ------------------------------------------------------------------ *
+ * Level 03 — one seat, two buyers, a race you can watch land.
+ * ------------------------------------------------------------------ */
 const seats: SceneBuilder = (group, p) => {
-  const geo = new THREE.BoxGeometry(0.5, 0.14, 0.5);
   const rows = 3;
   const cols = 7;
-  const hot = { r: 1, c: 3 };
-  let hotMesh: THREE.Mesh | null = null;
+  const hotR = 1;
+  const hotC = 3;
+  let hot!: THREE.Mesh;
+  const all: THREE.Mesh[] = [];
+
+  const deck = new THREE.Group();
+  deck.rotation.x = -0.34;
+  group.add(deck);
 
   for (let r = 0; r < rows; r++) {
     for (let c = 0; c < cols; c++) {
-      const isHot = r === hot.r && c === hot.c;
-      const m = new THREE.Mesh(geo, solid(isHot ? p.accent : p.deep));
-      m.position.set((c - (cols - 1) / 2) * 0.72, 0, (r - 1) * 0.8);
-      m.rotation.x = -0.28;
-      group.add(m);
-      if (isHot) hotMesh = m;
+      const isHot = r === hotR && c === hotC;
+      const seat = part(
+        new THREE.BoxGeometry(0.5, 0.16, 0.5),
+        isHot ? p.accent : p.deep,
+        p.outline,
+        1.06,
+      );
+      // A little seat back, so it reads as a seat and not a tile.
+      const back = part(
+        new THREE.BoxGeometry(0.5, 0.3, 0.12),
+        isHot ? p.accentDim : p.deep,
+        p.outline,
+        1.08,
+      );
+      back.position.set(0, 0.2, -0.2);
+      seat.add(back);
+      seat.position.set((c - (cols - 1) / 2) * 0.76, 0, (r - 1) * 0.86);
+      deck.add(seat);
+      all.push(seat);
+      if (isHot) hot = seat;
     }
   }
+  floor(group, 3.4, -0.75);
 
-  const a = new THREE.Mesh(new THREE.SphereGeometry(0.15, 14, 12), glow(p.accent));
-  const b = new THREE.Mesh(new THREE.SphereGeometry(0.15, 14, 12), glow(p.neutral));
-  group.add(a, b);
-  const seat = hotMesh!.position.clone();
+  const runnerA = part(new THREE.IcosahedronGeometry(0.19, 1), p.accent, p.outline, 1.12);
+  const runnerB = part(new THREE.IcosahedronGeometry(0.19, 1), p.neutral, p.outline, 1.12);
+  deck.add(runnerA, runnerB);
 
-  return (t) => {
-    const k = (t * 0.5) % 1;
-    const ease = k * k;
-    a.position.set(-4.2 + (seat.x + 4.2) * ease, 0.9 - ease * 0.5, -2.6 + (seat.z + 2.6) * ease);
-    b.position.set(4.2 + (seat.x - 4.2) * ease, 0.9 - ease * 0.5, 2.6 + (seat.z - 2.6) * ease);
-    const hit = k > 0.86 ? 1 : 0;
-    hotMesh!.scale.y = 1 + hit * 2.4;
-    a.visible = b.visible = k < 0.94;
-    group.rotation.y = Math.sin(t * 0.22) * 0.22;
+  const react = reactor();
+
+  return {
+    frame: { z: 7.0, y: -0.15 },
+    tick: (t) => {
+      const k = (t * 0.42) % 1;
+      const travel = k < 0.8 ? k / 0.8 : 1;
+      const e = travel * travel * (3 - 2 * travel);
+      const target = hot.position;
+
+      runnerA.position.set(
+        -4.6 + (target.x + 4.6) * e,
+        0.55 + Math.sin(e * Math.PI) * 0.5,
+        -3 + (target.z + 3) * e,
+      );
+      runnerB.position.set(
+        4.6 + (target.x - 4.6) * e,
+        0.55 + Math.sin(e * Math.PI) * 0.5,
+        3 + (target.z - 3) * e,
+      );
+      runnerA.rotation.set(t * 3, t * 2, 0);
+      runnerB.rotation.set(-t * 3, t * 2, 0);
+      const arrived = k > 0.8;
+      runnerA.visible = !arrived;
+      // The loser bounces off: one winner, every single time.
+      runnerB.visible = !arrived;
+
+      const land = arrived ? bounce((k - 0.8) / 0.2) : 0;
+      hot.scale.set(1 + land * 0.25, 1 + land * 1.5, 1 + land * 0.25);
+
+      all.forEach((s, i) => {
+        if (s === hot) return;
+        const poked = react.amount(s, t);
+        s.position.y = poked * 0.42 + Math.sin(t * 1.4 + i * 0.6) * 0.02;
+        s.scale.setScalar(1 + poked * 0.12);
+      });
+      group.rotation.y = Math.sin(t * 0.2) * 0.16;
+    },
+    targets: all,
+    hit: (object, t) => react.hit(object, t),
   };
 };
 
-/** Level 04 — a field of companies, a scan sweeping for real sponsors. */
+/* ------------------------------------------------------------------ *
+ * Level 04 — sweeping a field of companies for real sponsors.
+ * ------------------------------------------------------------------ */
 const scan: SceneBuilder = (group, p) => {
-  const count = 44;
-  const geo = new THREE.BoxGeometry(0.26, 0.26, 0.26);
-  const marks: { mesh: THREE.Mesh; angle: number; sponsor: boolean }[] = [];
+  const count = 36;
+  const marks: { mesh: THREE.Mesh; angle: number; sponsor: boolean; base: number }[] = [];
+  const react = reactor();
+
+  const ring = new THREE.Group();
+  ring.rotation.x = 0.32;
+  group.add(ring);
 
   for (let i = 0; i < count; i++) {
     const angle = (i / count) * Math.PI * 2;
-    const radius = 2.1 + (i % 3) * 0.62;
-    const sponsor = i % 7 === 0;
-    const mesh = new THREE.Mesh(geo, solid(sponsor ? p.accentDim : p.deep));
-    mesh.position.set(
-      Math.cos(angle) * radius,
-      ((i % 5) - 2) * 0.24,
-      Math.sin(angle) * radius,
+    const radius = 2.35 + (i % 3) * 0.55;
+    const sponsor = i % 6 === 0;
+    const h = sponsor ? 0.75 : 0.3 + ((i * 17) % 5) / 14;
+    const tower = part(
+      new THREE.BoxGeometry(0.3, h, 0.3),
+      sponsor ? p.accent : p.deep,
+      p.outline,
+      1.08,
     );
-    group.add(mesh);
-    marks.push({ mesh, angle, sponsor });
+    tower.position.set(Math.cos(angle) * radius, h / 2 - 0.9, Math.sin(angle) * radius);
+    ring.add(tower);
+    marks.push({ mesh: tower, angle, sponsor, base: h });
   }
 
-  const beam = new THREE.Mesh(
-    new THREE.PlaneGeometry(5.6, 2.4),
+  const beacon = part(new THREE.ConeGeometry(0.34, 0.8, 14), p.accent, p.outline, 1.1);
+  beacon.position.y = -0.5;
+  ring.add(beacon);
+
+  const sweep = new THREE.Mesh(
+    new THREE.CircleGeometry(3.3, 32, 0, 0.7),
     new THREE.MeshBasicMaterial({
       color: p.accent,
       transparent: true,
-      opacity: 0.14,
+      opacity: 0.16,
       side: THREE.DoubleSide,
+      depthWrite: false,
     }),
   );
-  group.add(beam);
+  sweep.rotation.x = -Math.PI / 2;
+  sweep.position.y = -0.88;
+  ring.add(sweep);
 
-  return (t) => {
-    const sweep = (t * 0.7) % (Math.PI * 2);
-    beam.rotation.y = sweep;
-    marks.forEach((m) => {
-      let d = Math.abs(((m.angle - sweep + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
-      d = Math.PI - d;
-      const near = Math.max(0, 1 - d * 2.2);
-      const lift = m.sponsor ? near : near * 0.35;
-      m.mesh.scale.setScalar(1 + lift * 1.5);
-      m.mesh.rotation.y = t * 0.6;
-    });
-    group.rotation.x = 0.28;
+  return {
+    frame: { z: 7.4, y: -0.2 },
+    tick: (t) => {
+      const angle = (t * 0.8) % (Math.PI * 2);
+      sweep.rotation.z = -angle;
+      beacon.rotation.y = angle;
+      beacon.position.y = -0.5 + Math.sin(t * 2) * 0.05;
+
+      marks.forEach((m) => {
+        let d = Math.abs(((m.angle - angle + Math.PI * 3) % (Math.PI * 2)) - Math.PI);
+        d = Math.PI - d;
+        const lit = Math.max(0, 1 - d * 2.6);
+        const poked = react.amount(m.mesh, t);
+        const grow = m.sponsor ? lit * 0.9 : lit * 0.2;
+        const h = m.base * (1 + grow + poked);
+        m.mesh.scale.y = h / m.base;
+        m.mesh.position.y = h / 2 - 0.9;
+      });
+    },
+    targets: marks.map((m) => m.mesh),
+    hit: (object, t) => react.hit(object, t),
   };
 };
 
-/** Level 05 — one prompt splitting into focused agents. */
+/* ------------------------------------------------------------------ *
+ * Level 05 — one prompt splitting into focused agents.
+ * ------------------------------------------------------------------ */
 const split: SceneBuilder = (group, p) => {
-  const core = new THREE.Mesh(new THREE.IcosahedronGeometry(0.9, 1), solid(p.accentDim));
+  const core = part(new THREE.IcosahedronGeometry(0.95, 1), p.accentDim, p.outline, 1.06);
   group.add(core);
+  floor(group, 1.9);
 
   const kids: THREE.Mesh[] = [];
-  const lines: THREE.Line[] = [];
+  const links: THREE.Line[] = [];
+  const react = reactor();
+
   for (let i = 0; i < 3; i++) {
-    const k = new THREE.Mesh(new THREE.IcosahedronGeometry(0.42, 1), solid(p.accent));
-    group.add(k);
-    kids.push(k);
+    const kid = part(new THREE.IcosahedronGeometry(0.42, 1), p.accent, p.outline, 1.1);
+    group.add(kid);
+    kids.push(kid);
     const line = new THREE.Line(
-      new THREE.BufferGeometry().setFromPoints([
-        new THREE.Vector3(),
-        new THREE.Vector3(),
-      ]),
-      new THREE.LineBasicMaterial({ color: p.neutralDim, transparent: true, opacity: 0.5 }),
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]),
+      new THREE.LineBasicMaterial({ color: p.neutralDim, transparent: true, opacity: 0.45 }),
     );
     group.add(line);
-    lines.push(line);
+    links.push(line);
   }
 
-  return (t) => {
-    core.rotation.y = t * 0.4;
-    core.rotation.x = t * 0.22;
-    const pulse = 1 + Math.sin(t * 2) * 0.05;
-    core.scale.setScalar(pulse);
-    kids.forEach((k, i) => {
-      const a = t * 0.8 + (i / 3) * Math.PI * 2;
-      const tilt = i * 0.5;
-      k.position.set(Math.cos(a) * 2.5, Math.sin(a + tilt) * 1.2, Math.sin(a) * 2.5);
-      k.rotation.y = t * 1.2;
-      const pos = lines[i].geometry.attributes.position as THREE.BufferAttribute;
-      pos.setXYZ(0, 0, 0, 0);
-      pos.setXYZ(1, k.position.x, k.position.y, k.position.z);
-      pos.needsUpdate = true;
-    });
+  return {
+    frame: { z: 6.6, y: 0 },
+    tick: (t) => {
+      const corePoke = react.amount(core, t);
+      core.rotation.set(t * 0.24, t * 0.42, 0);
+      core.scale.setScalar(1 + Math.sin(t * 2) * 0.04 + corePoke * 0.35);
+
+      kids.forEach((kid, i) => {
+        const a = t * 0.75 + (i / 3) * Math.PI * 2;
+        const poke = react.amount(kid, t);
+        const radius = 2.45 + poke * 0.9;
+        kid.position.set(Math.cos(a) * radius, Math.sin(a + i * 0.6) * 1.05, Math.sin(a) * radius);
+        kid.rotation.set(t * 1.1, t * 1.4, 0);
+        kid.scale.setScalar(1 + poke * 0.4);
+        const pos = links[i].geometry.attributes.position as THREE.BufferAttribute;
+        pos.setXYZ(0, 0, 0, 0);
+        pos.setXYZ(1, kid.position.x, kid.position.y, kid.position.z);
+        pos.needsUpdate = true;
+      });
+    },
+    targets: [core, ...kids],
+    hit: (object, t) => react.hit(object, t),
   };
 };
 
-/** Level 06 — lines of writing, one drifting out of the author's pattern. */
+/* ------------------------------------------------------------------ *
+ * Level 06 — lines of writing, one out of the author's pattern.
+ * ------------------------------------------------------------------ */
 const glyphs: SceneBuilder = (group, p) => {
   const rows = 9;
+  const odd = 5;
   const bars: THREE.Mesh[] = [];
+  const react = reactor();
+
+  const page = new THREE.Group();
+  page.rotation.set(0.14, -0.5, 0);
+  group.add(page);
+
   for (let i = 0; i < rows; i++) {
-    const w = 2.4 + ((i * 37) % 17) / 10;
-    const odd = i === 5;
-    const m = new THREE.Mesh(
-      new THREE.BoxGeometry(w, 0.12, 0.34),
-      solid(odd ? p.accent : p.neutralDim, odd ? 1 : 0.75),
+    const w = 2.3 + ((i * 37) % 17) / 9;
+    const isOdd = i === odd;
+    const bar = part(
+      new THREE.BoxGeometry(w, 0.16, 0.34),
+      isOdd ? p.accent : p.neutralDim,
+      p.outline,
+      1.07,
     );
-    m.position.set(0, (i - rows / 2) * 0.42, 0);
-    group.add(m);
-    bars.push(m);
+    bar.position.set((w - 4) / 2, (i - rows / 2) * 0.44, 0);
+    page.add(bar);
+    bars.push(bar);
   }
-  return (t) => {
-    bars.forEach((b, i) => {
-      const odd = i === 5;
-      b.position.z = Math.sin(t * 1.1 + i * 0.5) * 0.18 + (odd ? 0.9 + Math.sin(t * 2) * 0.2 : 0);
-      b.rotation.z = Math.sin(t * 0.7 + i) * 0.03 + (odd ? 0.12 : 0);
-    });
-    group.rotation.y = -0.5 + Math.sin(t * 0.3) * 0.18;
-    group.rotation.x = 0.1;
+  floor(group, 2.6, -2.3);
+
+  return {
+    frame: { z: 6.0, y: 0 },
+    tick: (t) => {
+      bars.forEach((bar, i) => {
+        const isOdd = i === odd;
+        const poke = react.amount(bar, t);
+        bar.position.z =
+          Math.sin(t * 1.1 + i * 0.5) * 0.14 +
+          (isOdd ? 0.95 + Math.sin(t * 2.2) * 0.18 : 0) +
+          poke * 0.7;
+        bar.rotation.z = Math.sin(t * 0.7 + i) * 0.025 + (isOdd ? 0.14 : 0);
+        bar.scale.y = 1 + poke * 0.6;
+      });
+      page.rotation.y = -0.5 + Math.sin(t * 0.28) * 0.14;
+    },
+    targets: bars,
+    hit: (object, t) => react.hit(object, t),
   };
 };
 
-/** Level 07 — required skills against the ones you have, gaps bridged. */
+/* ------------------------------------------------------------------ *
+ * Level 07 — required skills against what you have, gaps closing.
+ * ------------------------------------------------------------------ */
 const bars: SceneBuilder = (group, p) => {
   const n = 6;
   const need: THREE.Mesh[] = [];
   const have: THREE.Mesh[] = [];
-  const geo = new THREE.BoxGeometry(0.38, 1, 0.38);
+  const react = reactor();
+
+  const stage = new THREE.Group();
+  stage.rotation.set(0.18, 0.48, 0);
+  group.add(stage);
+
   for (let i = 0; i < n; i++) {
-    const a = new THREE.Mesh(geo, solid(p.neutralDim));
-    a.position.set((i - (n - 1) / 2) * 0.62, 0, -0.9);
-    const b = new THREE.Mesh(geo, solid(p.accent));
-    b.position.set((i - (n - 1) / 2) * 0.62, 0, 0.9);
-    group.add(a, b);
+    const a = part(new THREE.BoxGeometry(0.42, 1, 0.42), p.deep, p.outline, 1.07);
+    a.position.set((i - (n - 1) / 2) * 0.66, 0, -0.95);
+    const b = part(new THREE.BoxGeometry(0.42, 1, 0.42), p.accent, p.outline, 1.07);
+    b.position.set((i - (n - 1) / 2) * 0.66, 0, 0.95);
+    stage.add(a, b);
     need.push(a);
     have.push(b);
   }
-  return (t) => {
-    need.forEach((m, i) => {
-      const h = 1.4 + Math.sin(i * 1.7) * 0.5;
-      m.scale.y = h;
-      m.position.y = (h * 1) / 2 - 0.6;
-    });
-    have.forEach((m, i) => {
-      const target = 1.4 + Math.sin(i * 1.7) * 0.5;
-      const k = (Math.sin(t * 0.9 - i * 0.4) + 1) / 2;
-      const h = 0.35 + target * k;
-      m.scale.y = h;
-      m.position.y = (h * 1) / 2 - 0.6;
-    });
-    group.rotation.y = 0.5 + Math.sin(t * 0.25) * 0.2;
-    group.rotation.x = 0.16;
+  floor(group, 2.8, -1.4);
+
+  const set = (m: THREE.Mesh, h: number) => {
+    m.scale.y = h;
+    m.position.y = h / 2 - 1.15;
+  };
+
+  return {
+    frame: { z: 5.9, y: -0.15 },
+    tick: (t) => {
+      need.forEach((m, i) => set(m, 1.5 + Math.sin(i * 1.7) * 0.5 + react.amount(m, t)));
+      have.forEach((m, i) => {
+        const target = 1.5 + Math.sin(i * 1.7) * 0.5;
+        const k = (Math.sin(t * 0.85 - i * 0.42) + 1) / 2;
+        set(m, 0.35 + target * k + react.amount(m, t));
+      });
+      stage.rotation.y = 0.48 + Math.sin(t * 0.22) * 0.16;
+    },
+    targets: [...need, ...have],
+    hit: (object, t) => react.hit(object, t),
   };
 };
 
-/** Level 08 — eight regions, one carrying almost everything. */
+/* ------------------------------------------------------------------ *
+ * Level 08 — eight regions, one carrying almost all of it.
+ * ------------------------------------------------------------------ */
 const spike: SceneBuilder = (group, p) => {
   const n = 8;
+  const hotIndex = 5;
   const cols: THREE.Mesh[] = [];
-  const hot = 5;
-  for (let i = 0; i < n; i++) {
-    const m = new THREE.Mesh(
-      new THREE.BoxGeometry(0.46, 1, 0.46),
-      solid(i === hot ? p.accent : p.deep),
-    );
-    m.position.x = (i - (n - 1) / 2) * 0.7;
-    group.add(m);
-    cols.push(m);
-  }
-  const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(0.5, 0.03, 8, 32),
-    glow(p.accent),
-  );
-  ring.rotation.x = Math.PI / 2;
-  group.add(ring);
+  const react = reactor();
 
-  return (t) => {
-    const grow = Math.min(1, ((t * 0.5) % 3) / 1.2);
-    cols.forEach((m, i) => {
-      const base = i === hot ? 0.5 + grow * 3.4 : 0.5 + ((i * 13) % 7) / 12;
-      m.scale.y = base;
-      m.position.y = base / 2 - 1;
-    });
-    ring.position.set(cols[hot].position.x, cols[hot].scale.y - 1 + 0.1, 0);
-    ring.scale.setScalar(1 + Math.sin(t * 3) * 0.12);
-    group.rotation.y = Math.sin(t * 0.24) * 0.3;
-    group.rotation.x = 0.2;
+  const stage = new THREE.Group();
+  stage.rotation.x = 0.2;
+  group.add(stage);
+
+  for (let i = 0; i < n; i++) {
+    const col = part(
+      new THREE.BoxGeometry(0.5, 1, 0.5),
+      i === hotIndex ? p.accent : p.deep,
+      p.outline,
+      1.07,
+    );
+    col.position.x = (i - (n - 1) / 2) * 0.74;
+    stage.add(col);
+    cols.push(col);
+  }
+  floor(group, 3.2, -1.35);
+
+  const crown = part(new THREE.TorusGeometry(0.42, 0.05, 8, 24), p.accent, p.outline, 1.14);
+  crown.rotation.x = Math.PI / 2;
+  stage.add(crown);
+
+  return {
+    frame: { z: 7.1, y: -0.25 },
+    tick: (t) => {
+      const cycle = (t * 0.42) % 3.4;
+      const grow = Math.min(1, cycle / 1.3);
+      cols.forEach((col, i) => {
+        const poke = react.amount(col, t);
+        const h =
+          (i === hotIndex ? 0.5 + grow * 3.3 : 0.5 + ((i * 13) % 7) / 11) + poke * 0.8;
+        col.scale.y = h;
+        col.position.y = h / 2 - 1.2;
+      });
+      const hot = cols[hotIndex];
+      crown.position.set(hot.position.x, hot.position.y + hot.scale.y / 2 + 0.22, 0);
+      crown.rotation.z = t * 0.9;
+      crown.scale.setScalar(1 + Math.sin(t * 3) * 0.1);
+      stage.rotation.y = Math.sin(t * 0.22) * 0.24;
+    },
+    targets: cols,
+    hit: (object, t) => react.hit(object, t),
   };
 };
 
-/** Level 09 — a stream of note lines with one fabricated fragment. */
+/* ------------------------------------------------------------------ *
+ * Level 09 — a stream of note lines, one fabricated.
+ * ------------------------------------------------------------------ */
 const stream: SceneBuilder = (group, p) => {
-  const n = 16;
+  const n = 15;
   const items: THREE.Mesh[] = [];
+  const react = reactor();
+  group.rotation.y = 0.26;
+
   for (let i = 0; i < n; i++) {
-    const bad = i % 8 === 3;
-    const m = new THREE.Mesh(
-      new THREE.BoxGeometry(bad ? 0.9 : 1.7 + ((i * 29) % 11) / 10, 0.1, 0.28),
-      solid(bad ? p.accent : p.neutralDim, bad ? 1 : 0.6),
+    const bad = i % 5 === 2;
+    const mesh = part(
+      new THREE.BoxGeometry(bad ? 1 : 1.9 + ((i * 29) % 11) / 9, 0.15, 0.32),
+      bad ? p.accent : p.neutralDim,
+      p.outline,
+      1.07,
     );
-    m.userData.bad = bad;
-    group.add(m);
-    items.push(m);
+    mesh.userData.bad = bad;
+    group.add(mesh);
+    items.push(mesh);
   }
-  return (t) => {
-    items.forEach((m, i) => {
-      const z = (((t * 1.1 + i * 0.55) % 9) - 4.5) * 1;
-      m.position.set(m.userData.bad ? Math.sin(t * 4 + i) * 0.22 : 0, ((i % 4) - 1.5) * 0.4, z);
-      const near = 1 - Math.min(1, Math.abs(z) / 4.5);
-      (m.material as THREE.MeshLambertMaterial).opacity = m.userData.bad
-        ? 0.5 + near * 0.5
-        : 0.15 + near * 0.5;
-      if (m.userData.bad) m.rotation.z = Math.sin(t * 6 + i) * 0.25;
-    });
-    group.rotation.y = 0.3;
+
+  return {
+    frame: { z: 6.4, y: 0 },
+    tick: (t) => {
+      items.forEach((m, i) => {
+        const z = ((t * 1.15 + i * 0.6) % 9) - 4.5;
+        const poke = react.amount(m, t);
+        m.position.set(
+          m.userData.bad ? Math.sin(t * 5 + i) * 0.2 : 0,
+          ((i % 4) - 1.5) * 0.45,
+          z,
+        );
+        m.scale.setScalar(1 + poke * 0.5);
+        if (m.userData.bad) m.rotation.z = Math.sin(t * 6 + i) * 0.22 + poke * 0.6;
+      });
+    },
+    targets: items,
+    hit: (object, t) => react.hit(object, t),
   };
 };
 
-/** Level 01 — the person: a core with orbiting work. */
+/* ------------------------------------------------------------------ *
+ * Level 01 — the person: a core, a ring, and the work orbiting it.
+ * ------------------------------------------------------------------ */
 const profile: SceneBuilder = (group, p) => {
   const core = new THREE.Mesh(
-    new THREE.IcosahedronGeometry(1.1, 1),
-    new THREE.MeshBasicMaterial({ color: p.accentDim, wireframe: true }),
+    new THREE.IcosahedronGeometry(1.15, 1),
+    toon(p.accentDim),
   );
   group.add(core);
-
-  const ring = new THREE.Mesh(
-    new THREE.TorusGeometry(2.1, 0.02, 8, 64),
-    glow(p.neutralDim),
+  const shell = new THREE.Mesh(
+    new THREE.IcosahedronGeometry(1.3, 1),
+    new THREE.MeshBasicMaterial({ color: p.accent, wireframe: true, transparent: true, opacity: 0.4 }),
   );
-  ring.rotation.x = Math.PI / 2.6;
+  group.add(shell);
+  floor(group, 2.1, -1.6);
+
+  const ring = part(new THREE.TorusGeometry(2.15, 0.035, 8, 48), p.neutralDim, p.outline, 1.3);
+  ring.rotation.x = Math.PI / 2.5;
   group.add(ring);
 
   const cubes: THREE.Mesh[] = [];
-  for (let i = 0; i < 10; i++) {
-    const c = new THREE.Mesh(
-      new THREE.BoxGeometry(0.22, 0.22, 0.22),
-      solid(i % 3 === 0 ? p.accent : p.neutralDim),
+  const react = reactor();
+  for (let i = 0; i < 9; i++) {
+    const cube = part(
+      new THREE.BoxGeometry(0.26, 0.26, 0.26),
+      i % 3 === 0 ? p.accent : p.neutralDim,
+      p.outline,
+      1.11,
     );
-    group.add(c);
-    cubes.push(c);
+    group.add(cube);
+    cubes.push(cube);
   }
 
-  return (t) => {
-    core.rotation.y = t * 0.3;
-    core.rotation.x = t * 0.17;
-    cubes.forEach((c, i) => {
-      const a = t * 0.5 + (i / cubes.length) * Math.PI * 2;
-      const r = 2.1;
-      c.position.set(Math.cos(a) * r, Math.sin(a * 1.6 + i) * 0.5, Math.sin(a) * r);
-      c.rotation.set(t * 0.8 + i, t * 0.6, 0);
-    });
-    ring.rotation.z = t * 0.12;
+  return {
+    frame: { z: 6.5, y: 0 },
+    tick: (t) => {
+      const corePoke = react.amount(core, t);
+      core.rotation.set(t * 0.18, t * 0.3, 0);
+      core.scale.setScalar(1 + corePoke * 0.3);
+      shell.rotation.set(-t * 0.12, -t * 0.2, 0);
+      shell.scale.setScalar(1 + Math.sin(t * 1.5) * 0.03 + corePoke * 0.4);
+      ring.rotation.z = t * 0.14;
+
+      cubes.forEach((cube, i) => {
+        const a = t * 0.46 + (i / cubes.length) * Math.PI * 2;
+        const poke = react.amount(cube, t);
+        const r = 2.15 + poke * 0.8;
+        cube.position.set(Math.cos(a) * r, Math.sin(a * 1.5 + i) * 0.5, Math.sin(a) * r);
+        cube.rotation.set(t * 0.7 + i, t * 0.5, 0);
+        cube.scale.setScalar(1 + poke * 0.5);
+      });
+    },
+    targets: [core, ...cubes],
+    hit: (object, t) => react.hit(object, t),
   };
 };
 

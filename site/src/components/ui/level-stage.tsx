@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import * as THREE from "three";
 import { useTheme } from "next-themes";
 import { PALETTES, SCENES } from "@/lib/scenes";
+import { backOut } from "@/lib/toon";
 
 /**
  * One renderer for the whole page, borrowed by whichever level is on screen.
@@ -79,31 +80,40 @@ export function LevelStage({ scene, cleared = false, className }: Props) {
     const palette = resolvedTheme === "light" ? PALETTES.light : PALETTES.dark;
 
     const renderer = getRenderer();
+    const camera = new THREE.PerspectiveCamera(42, 3, 0.1, 100);
+    const root = new THREE.Scene();
+    const group = new THREE.Group();
+    root.add(group);
+    const handle = build(group, palette);
+    const tick = handle.tick;
+
     const resize = () => {
       const w = host.clientWidth || 600;
       const h = host.clientHeight || 200;
       renderer.setSize(w, h);
       const aspect = w / h;
       camera.aspect = aspect;
-      // These compositions are wide. On a phone the canvas is nearly square,
-      // so step the camera in rather than letting the scene shrink into it.
-      camera.position.z = aspect < 2.6 ? Math.max(5.4, 8.4 * (aspect / 2.6)) : 8.4;
+      // Each scene says how close to sit; a narrow phone canvas then pulls in
+      // further still, so the subject fills the frame instead of floating in
+      // the middle of it.
+      const base = handle.frame?.z ?? 7;
+      camera.position.set(0, (handle.frame?.y ?? 0) + 0.5, base);
+      camera.lookAt(0, handle.frame?.y ?? 0, 0);
       camera.updateProjectionMatrix();
     };
 
-    const camera = new THREE.PerspectiveCamera(42, 3, 0.1, 100);
-    camera.position.set(0, 1.5, 8.4);
-    camera.lookAt(0, 0, 0);
 
-    const root = new THREE.Scene();
-    root.add(new THREE.HemisphereLight(palette.neutral, palette.deep, 2.2));
-    const key = new THREE.DirectionalLight(palette.accent, 1.5);
-    key.position.set(3, 5, 4);
+    // Three lights, because toon banding needs a direction to band along:
+    // a key to shape it, a rim behind to lift it off the background, and a
+    // soft hemisphere so the shadow side never goes fully dead.
+    root.add(new THREE.HemisphereLight(palette.neutral, palette.deep, 1.5));
+    const key = new THREE.DirectionalLight(0xffffff, 2.4);
+    key.position.set(3.5, 6, 5);
     root.add(key);
+    const rim = new THREE.DirectionalLight(palette.accent, 2.6);
+    rim.position.set(-4, 2.5, -5);
+    root.add(rim);
 
-    const group = new THREE.Group();
-    root.add(group);
-    const tick = build(group, palette);
 
     ownerId = id;
     host.appendChild(renderer.domElement);
@@ -139,13 +149,13 @@ export function LevelStage({ scene, cleared = false, className }: Props) {
         resize();
       }
 
-      if (intro < 1) intro = Math.min(1, intro + delta * 1.6);
-      const eased = 1 - Math.pow(1 - intro, 3);
+      if (intro < 1) intro = Math.min(1, intro + delta * 1.5);
+      // Overshoot, not ease-out: it should land past the mark and settle.
+      const eased = intro >= 1 ? 1 : backOut(intro, 1.35);
 
       tick(clock.getElapsedTime());
-      group.position.y = -1.6 * (1 - eased);
-      group.scale.setScalar(0.85 + 0.15 * eased);
-      group.rotation.y += 0;
+      group.position.y = -1.5 * (1 - eased);
+      group.scale.setScalar(0.72 + 0.28 * eased);
 
       renderer.render(root, camera);
     };
@@ -153,9 +163,29 @@ export function LevelStage({ scene, cleared = false, className }: Props) {
 
     window.addEventListener("resize", resize);
 
+    // Tap to poke. Pointer events only bind when a scene declares targets,
+    // so the stage stays inert (and non-blocking) when there is nothing to hit.
+    const raycaster = new THREE.Raycaster();
+    const pointer = new THREE.Vector2();
+    const onPointer = (event: PointerEvent) => {
+      if (!handle.targets?.length || !handle.hit) return;
+      const rect = renderer.domElement.getBoundingClientRect();
+      pointer.x = ((event.clientX - rect.left) / rect.width) * 2 - 1;
+      pointer.y = -((event.clientY - rect.top) / rect.height) * 2 + 1;
+      raycaster.setFromCamera(pointer, camera);
+      const struck = raycaster.intersectObjects(handle.targets, true)[0];
+      if (struck) handle.hit(struck.object, clock.getElapsedTime());
+    };
+    if (handle.targets?.length) {
+      host.style.pointerEvents = "auto";
+      host.style.cursor = "pointer";
+      host.addEventListener("pointerdown", onPointer);
+    }
+
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener("resize", resize);
+      host.removeEventListener("pointerdown", onPointer);
       // Give the canvas back, but keep the context alive for the next level.
       if (renderer.domElement.parentElement === host) {
         host.removeChild(renderer.domElement);
@@ -174,9 +204,9 @@ export function LevelStage({ scene, cleared = false, className }: Props) {
     <div
       ref={hostRef}
       aria-hidden="true"
-      className={`pointer-events-none overflow-hidden transition-opacity duration-1000 ${
+      className={`touch-manipulation overflow-hidden transition-opacity duration-1000 ${
         cleared ? "opacity-35" : "opacity-100"
-      } ${className ?? "h-40 w-full sm:h-52"}`}
+      } ${className ?? "h-56 w-full sm:h-64"}`}
     />
   );
 }

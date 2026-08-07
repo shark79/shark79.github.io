@@ -37,6 +37,8 @@ type Project = {
   whatILearned: string;
   quiz: Quiz;
   stats: Stat[];
+  /** Phrase in `brief` that answers the level's own question. */
+  spoiler?: string;
 };
 
 // Newest first. Keep this order — the section reads as a timeline.
@@ -47,6 +49,7 @@ const PROJECTS: Project[] = [
     period: "Jul 2026 to Aug 2026",
     brief:
       "Five AI agents with different jobs, including one whose only job is to break things, built and shipped a working app together for under twelve dollars.",
+    spoiler: "for under twelve dollars",
     tags: ["OpenCode", "OpenRouter", "Multi-Agent", "Kimi K3", "GLM 5.2"],
     links: [
       {
@@ -115,6 +118,7 @@ const PROJECTS: Project[] = [
     period: "Jul 2026",
     brief:
       "Finds jobs at companies that genuinely sponsor visas, using the government's own filing data, then tailors a resume, finds a recruiter, and drafts the email. You hit send, it never does.",
+    spoiler: "You hit send, it never does.",
     tags: ["MCP", "npm", "Node.js", "Apollo.io", "DOL Open Data"],
     links: [
       { label: "GitHub", href: "https://github.com/shark79/job-finder" },
@@ -317,6 +321,38 @@ const ICON_BY_ID: Record<string, React.ReactNode> = {
   googlefiber: <BarChart3 className="size-4" />,
 };
 
+/**
+ * Several briefs state the very number their level asks you to guess. Blur
+ * that phrase until the call is made — reading it back afterwards is part of
+ * the payoff, so it stays in place rather than being cut.
+ */
+function Brief({
+  text,
+  spoiler,
+  hide,
+}: {
+  text: string;
+  spoiler?: string;
+  hide: boolean;
+}) {
+  if (!spoiler || !hide) return <>{text}</>;
+  const at = text.indexOf(spoiler);
+  if (at < 0) return <>{text}</>;
+  return (
+    <>
+      {text.slice(0, at)}
+      <span
+        aria-hidden="true"
+        className="select-none rounded bg-primary/10 px-1 blur-[5px]"
+      >
+        {spoiler}
+      </span>
+      <span className="sr-only">(hidden until you make the call)</span>
+      {text.slice(at + spoiler.length)}
+    </>
+  );
+}
+
 export function Projects() {
   const [open, setOpen] = useState<string | null>(null);
   const [highlighted, setHighlighted] = useState<string | null>(null);
@@ -413,7 +449,11 @@ export function Projects() {
                     {p.period}
                   </p>
                   <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted-foreground">
-                    {p.brief}
+                    <Brief
+                      text={p.brief}
+                      spoiler={p.spoiler}
+                      hide={playing && !cleared.includes(p.id)}
+                    />
                   </p>
                   <div className="mt-4 flex flex-wrap gap-2">
                     {p.tags.map((t) => (
@@ -450,6 +490,8 @@ export function Projects() {
                       {/* The one project you can prove instead of read. */}
                       {p.id === "reservation" ? <SeatRace /> : null}
                     </Level>
+                    {(!playing || cleared.includes(p.id)) && (
+                    <>
                     <div>
                       <div className="mb-1.5 font-mono text-[10px] uppercase tracking-widest text-primary">
                         What it does
@@ -468,6 +510,8 @@ export function Projects() {
                       </div>
                       <p>{p.whatILearned}</p>
                     </div>
+                    </>
+                    )}
                   </div>
                 )}
               </div>
