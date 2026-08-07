@@ -1,3 +1,8 @@
+"use client";
+
+import { Level, LevelBadge } from "@/components/ui/level";
+import { useMode } from "@/lib/mode";
+
 const STATS = [
   { label: "Master's GPA, ASU", value: "4.0" },
   { label: "Clinical Note Gen Speedup", value: "60%" },
@@ -17,6 +22,8 @@ const EDUCATION = [
 ];
 
 export function About() {
+  const playing = useMode() === "play";
+
   return (
     <section id="about" className="border-b border-border px-6 py-24 sm:px-10">
       <div className="glass-panel mx-auto max-w-5xl px-6 py-10 sm:px-10 sm:py-14">
@@ -50,7 +57,7 @@ export function About() {
             <p>
               Right now I&apos;m an{" "}
               <strong className="font-medium text-foreground">
-                AI Developer at CMCI
+                AI Developer at DocAide.ai
               </strong>
               , doing the most demanding work of my career: clinical AI,
               where mistakes aren&apos;t an option and speed matters just as
@@ -75,7 +82,32 @@ export function About() {
           </div>
 
           <div>
-            {STATS.map((s) => (
+            <div className="mb-8">
+              <LevelBadge id="about" />
+              <Level
+                id="about"
+                quiz={{
+                  question:
+                    "I cut the time to generate a clinical note from about 40 seconds to 15. What did that take?",
+                  options: [
+                    "A bigger model",
+                    "Running steps in parallel",
+                    "Caching the answers",
+                  ],
+                  answer: 1,
+                  reveal:
+                    "Backend steps that were running one after another had no reason to. Running them at the same time did it — no new model, no cache, nothing that could go stale and hand a clinician the wrong note.",
+                }}
+                stats={[
+                  { label: "Master's GPA, ASU", value: "4.0" },
+                  { label: "Note generation", value: "60%" },
+                  { label: "Medication capture", value: "100%" },
+                  { label: "Agent iterations", value: "40+" },
+                ]}
+              />
+            </div>
+            {!playing &&
+              STATS.map((s) => (
               <div
                 key={s.label}
                 className="flex items-center justify-between border-b border-border py-5 first:border-t"
@@ -87,7 +119,7 @@ export function About() {
                   {s.value}
                 </span>
               </div>
-            ))}
+              ))}
 
             <div className="mt-8 space-y-4">
               {EDUCATION.map((e) => (

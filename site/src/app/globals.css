@@ -209,6 +209,74 @@
   border-radius: var(--radius-lg);
 }
 
+/* ---- Level games (seat race, spot the hallucination) ---- */
+
+/* A request travelling from the client to the seat. Stops short of the seat
+   panel (w-20 = 5rem) so the dot lands against it rather than under it. */
+@keyframes race-packet {
+  from {
+    left: 0.5rem;
+    opacity: 0;
+  }
+  12% {
+    opacity: 1;
+  }
+  to {
+    left: calc(100% - 10.5rem);
+    opacity: 1;
+  }
+}
+.race-packet {
+  animation: race-packet cubic-bezier(0.4, 0, 0.2, 1) forwards;
+}
+
+@keyframes race-pop {
+  from {
+    opacity: 0;
+    transform: translateY(4px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.race-pop {
+  animation: race-pop 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes race-shake {
+  0%,
+  100% {
+    transform: translateX(0);
+  }
+  20% {
+    transform: translateX(-5px);
+  }
+  40% {
+    transform: translateX(5px);
+  }
+  60% {
+    transform: translateX(-3px);
+  }
+  80% {
+    transform: translateX(3px);
+  }
+}
+.race-shake {
+  animation: race-shake 0.45s ease-in-out;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .race-packet,
+  .race-pop,
+  .race-shake {
+    animation: none;
+  }
+  .race-packet {
+    opacity: 1;
+  }
+}
+
 /* Gallery prev/next arrows: glass buttons with a soft accent glow on
    hover, floating over the photo track. */
 .gallery-arrow {

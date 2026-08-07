@@ -9,6 +9,9 @@ import { Experience } from "@/components/sections/experience";
 import { Skills } from "@/components/sections/skills";
 import { Gallery } from "@/components/sections/gallery";
 import { Contact } from "@/components/sections/contact";
+import { LevelComplete } from "@/components/ui/level-complete";
+import { ModeGate } from "@/components/ui/mode-gate";
+import { Achievements } from "@/components/ui/achievement";
 
 export default function Home() {
   return (
@@ -25,6 +28,9 @@ export default function Home() {
         <Gallery />
         <Contact />
       </main>
+      <Achievements />
+      <LevelComplete />
+      <ModeGate />
       <Footer />
     </>
   );

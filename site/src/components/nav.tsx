@@ -3,6 +3,64 @@
 import * as React from "react";
 import { Menu, X } from "lucide-react";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { TOTAL_LEVELS, useProgress } from "@/lib/progress";
+import { resetMode, useMode } from "@/lib/mode";
+
+const RING = 2 * Math.PI * 10;
+
+function LevelRing() {
+  const { cleared } = useProgress();
+  const mode = useMode();
+  const done = cleared.length;
+
+  // In read mode there is no run to track, so the ring stays out of the way.
+  if (mode !== "play") {
+    return (
+      <button
+        type="button"
+        onClick={resetMode}
+        title="Switch to the playable version"
+        className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground transition-colors hover:text-primary"
+      >
+        Play it
+      </button>
+    );
+  }
+
+  return (
+    <a
+      href="#work"
+      title={`${done} of ${TOTAL_LEVELS} levels cleared`}
+      className="flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
+    >
+      <svg viewBox="0 0 24 24" className="size-6 -rotate-90" aria-hidden="true">
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+          fill="none"
+          strokeWidth="2"
+          className="stroke-border"
+        />
+        <circle
+          cx="12"
+          cy="12"
+          r="10"
+          fill="none"
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeDasharray={RING}
+          strokeDashoffset={RING * (1 - done / TOTAL_LEVELS)}
+          className="stroke-primary transition-[stroke-dashoffset] duration-700 ease-out"
+        />
+      </svg>
+      <span className="font-mono text-[10px] tabular-nums">
+        {done}/{TOTAL_LEVELS}
+      </span>
+      <span className="sr-only">levels cleared, jump to the work section</span>
+    </a>
+  );
+}
 
 const LINKS = [
   { href: "#about", label: "About" },
@@ -16,7 +74,7 @@ export function Nav() {
 
   return (
     <header className="fixed inset-x-0 top-0 z-50 bg-background/70 backdrop-blur-md transition-colors">
-      <nav className="flex w-full items-center justify-between px-6 py-4 sm:px-10 lg:px-14">
+      <nav className="grid w-full grid-cols-[1fr_auto_1fr] items-center px-6 py-4 sm:px-10 lg:px-14">
         <a
           href="#top"
           className="font-heading text-sm font-semibold tracking-tight"
@@ -24,7 +82,7 @@ export function Nav() {
         >
           sj<span className="text-primary">.</span>
         </a>
-        <ul className="hidden items-center gap-8 sm:flex">
+        <ul className="col-start-2 hidden items-center justify-center gap-8 sm:flex">
           {LINKS.map((l) => (
             <li key={l.href}>
               <a
@@ -36,7 +94,8 @@ export function Nav() {
             </li>
           ))}
         </ul>
-        <div className="flex items-center gap-4">
+        <div className="col-start-3 flex items-center justify-end gap-4">
+          <LevelRing />
           <ThemeToggle />
           <a
             href="#contact"

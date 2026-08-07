@@ -1,6 +1,14 @@
+"use client";
+
+import { HallucinationGame } from "@/components/ui/hallucination-game";
+import { LevelBadge } from "@/components/ui/level";
+import { LevelStage } from "@/components/ui/level-stage";
+import { useMode } from "@/lib/mode";
+import { useProgress } from "@/lib/progress";
+
 const JOBS = [
   {
-    company: "CMCI",
+    company: "DocAide.ai",
     period: "Jun 2025 to Present",
     role: "AI Developer",
     desc: "I work on AI that gets used in an actual hospital setting, so there's no room for the system to guess wrong. It's changed how I think about building software when real people are depending on it.",
@@ -18,23 +26,32 @@ const JOBS = [
       <>
         Built AI workflows that write medical orders straight into the
         hospital&apos;s record system, using the correct medical codes and
-        built-in checks that catch mistakes before they happen
+        built-in checks that catch mistakes before they happen. Also got
+        medication capture from noisy audio up to <strong>100%</strong>
       </>,
       <>
-        Compared two AI models head to head to see which one wrote more
-        accurate clinical notes, then led the switch to the winner. Also
-        improved how well the system picks up medication names from noisy
-        audio, getting that accuracy up to <strong>100%</strong>
+        Ran two AI models head to head on clinical note accuracy, led the
+        switch to the winner, and made both fully supported on AWS Bedrock so
+        the answer a clinician gets never depends on which model happens to be
+        running underneath
       </>,
       <>
-        Took ownership of keeping things running smoothly, including safely
-        migrating records for hundreds of patients and tracking down a
-        production issue to a same-day fix
+        Rebuilt how patient data is stored: vitals, labs, imaging, and
+        cardiology results moved out of one overloaded catch-all field into
+        their own tables, with the pipeline that fills them from clinical
+        notes and a graph view of vitals across dates
       </>,
       <>
-        Rebuilt our main AI assistant from scratch so it actually understands
-        what people are asking for. Took a lot of tries to get right, but
-        it&apos;s now the most used AI feature we have
+        Built the subscription billing system from scratch on Square, end to
+        end: checkout, signed webhooks so incoming payment events can be
+        trusted, full payment lifecycle tracking, and automatic receipt and
+        failed-payment emails. Shipped to production in three phases
+      </>,
+      <>
+        Owned the critical fixes: a full production outage of both AI
+        features, vitals not being picked up from dictated notes, and three
+        separate cases of the assistant answering confidently but wrongly.
+        Root-caused each one
       </>,
     ],
   },
@@ -70,6 +87,10 @@ const ACTIVITIES = [
 ];
 
 export function Experience() {
+  const playing = useMode() === "play";
+  const { cleared } = useProgress();
+  const accuracyCleared = cleared.includes("accuracy");
+
   return (
     <section
       id="experience"
@@ -117,6 +138,31 @@ export function Experience() {
               </div>
             </div>
           ))}
+        </div>
+
+        {/* The hardest part of the day job, as a thing you do rather than a
+            bullet you skim. Read mode gets the same point in prose. */}
+        <div className="mt-16 border-t border-border pt-10">
+          <LevelBadge id="accuracy" />
+          <div className="max-w-2xl">
+            {playing ? (
+              <>
+                <LevelStage scene="accuracy" cleared={accuracyCleared} />
+                <div className="mt-4">
+                  <HallucinationGame />
+                </div>
+              </>
+            ) : (
+              <p className="text-sm leading-relaxed text-muted-foreground">
+                The bug class that matters most here isn&apos;t a crash, it&apos;s a
+                confident wrong answer: an invented symptom, a stale date, a
+                medication list that quietly drops two prescriptions. All three
+                happened in production and all three were root-caused and fixed.
+                In a clinical product that is a patient-safety problem the
+                moment a clinician believes it, not a cosmetic bug.
+              </p>
+            )}
+          </div>
         </div>
 
         <div className="mt-16 grid gap-8 border-t border-border pt-10 sm:grid-cols-2">

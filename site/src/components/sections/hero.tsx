@@ -15,22 +15,21 @@ export function Hero() {
       <div className="glass-panel relative z-10 mx-auto w-full max-w-5xl px-6 py-8 sm:px-10 sm:py-10">
         <p className="mb-6 flex items-center gap-3 font-mono text-xs uppercase tracking-[0.2em] text-primary">
           <span className="inline-block h-px w-8 bg-muted-foreground" />
-          AI Engineer / GenAI Developer
+          AI Engineer / Applied GenAI &amp; Agentic Systems
         </p>
-        <h1 className="font-heading text-[13vw] font-semibold leading-[0.95] tracking-tight sm:text-7xl md:text-8xl">
-          <span className="text-muted-foreground/30 line-through decoration-2">
-            Don&apos;t
-          </span>{" "}
-          <span className="text-primary">judge</span> a book
-          <br />
-          by its <span className="text-primary">cover</span>.
+        {/* No hard break on mobile — the line simply wraps; the two-line
+            split only reads well once there's room for it. */}
+        <h1 className="font-heading text-[12vw] font-semibold leading-[0.95] tracking-tight sm:text-7xl md:text-8xl">
+          AI that <span className="text-primary">helps</span>.{" "}
+          <br className="hidden sm:inline" />
+          And knows when <span className="text-primary">not</span> to.
         </h1>
 
         <div className="mt-10 flex flex-col gap-6 sm:flex-row sm:items-end sm:justify-between">
           <p className="max-w-xs text-sm leading-relaxed text-muted-foreground">
             RAG Pipelines · Agentic AI · AWS Bedrock
             <br />
-            Clinical AI @ CMCI · ASU M.S. 4.0 GPA
+            Clinical AI @ DocAide.ai · ASU M.S. 4.0 GPA
           </p>
           <div className="flex items-center gap-4">
             <InteractiveHoverButton
