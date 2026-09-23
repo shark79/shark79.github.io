@@ -204,3 +204,13 @@ The owner's quality references: vectrfl.com, skyclinics.al, aircenter.space,
 - Performance: render only while scrolling/animating + low-rate idle loop (≈30fps) for
   birds/clouds; stop entirely when the tab is hidden; DPR caps as §4. Reduced motion:
   camera jumps between keyframes with a crossfade, no idle animation.
+
+## 8. Paintings in the castle (owner request)
+
+The "Off the clock" photos also hang as framed paintings inside the castle's interiors
+(`PAINTINGS` in `content.ts`: 2 in the Study, 2 in the Hall, 9 in the Gallery room).
+Each opening has a shallow lit interior behind it; the Gallery section takes the camera
+through the round window into a small gallery hall that pans along the paintings.
+Textures are 640px web copies in `public/gallery/paintings/`, lazy-loaded near their room;
+originals open in an HTML lightbox (`castle:painting` window event → `painting-lightbox.tsx`).
+The HTML `#gallery` section remains as the accessible version, styled as a picture rail.

@@ -590,3 +590,30 @@ export const PHOTOS = [
   "IMG_1234.jpg", "IMG_1369.jpg", "IMG_2609.jpg", "IMG_3560.jpg",
   "IMG_4732.jpg",
 ];
+
+/**
+ * The same photos hung as framed paintings inside the castle's interiors.
+ * `src` is a 640px-max web copy (public/gallery/paintings/) sized for WebGL
+ * textures — the full photo is `/gallery/<file>` for the lightbox. Frames
+ * must match `w`/`h` so nothing is cropped or stretched.
+ */
+export const PAINTINGS: {
+  file: string;
+  w: number;
+  h: number;
+  room: RoomId;
+}[] = [
+  { file: "IMG_0148.jpg", w: 575, h: 640, room: "about" },
+  { file: "IMG_1234.jpg", w: 461, h: 640, room: "about" },
+  { file: "IMG_0369.jpg", w: 640, h: 480, room: "experience" },
+  { file: "IMG_0158.jpg", w: 378, h: 640, room: "experience" },
+  { file: "IMG_0150.jpg", w: 480, h: 640, room: "gallery" },
+  { file: "IMG_0161.jpg", w: 640, h: 520, room: "gallery" },
+  { file: "IMG_0170.jpg", w: 640, h: 595, room: "gallery" },
+  { file: "IMG_0249.jpg", w: 640, h: 441, room: "gallery" },
+  { file: "IMG_0722.jpg", w: 640, h: 512, room: "gallery" },
+  { file: "IMG_1369.jpg", w: 438, h: 640, room: "gallery" },
+  { file: "IMG_2609.jpg", w: 640, h: 480, room: "gallery" },
+  { file: "IMG_3560.jpg", w: 640, h: 545, room: "gallery" },
+  { file: "IMG_4732.jpg", w: 640, h: 480, room: "gallery" },
+];
