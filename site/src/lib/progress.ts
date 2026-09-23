@@ -1,56 +1,101 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { PROJECTS, ROOMS, type RoomId } from "@/lib/content";
 
-/** Page order: about, seven projects, then the accuracy level in experience. */
-export const LEVELS = [
-  { id: "about", n: 1, badge: "Did the homework" },
-  { id: "devteam", n: 2, badge: "Budget hawk" },
-  { id: "reservation", n: 3, badge: "Race marshal" },
-  { id: "jobfinder", n: 4, badge: "Gatekeeper" },
-  { id: "agentcore", n: 5, badge: "Traffic control" },
-  { id: "styloguard", n: 6, badge: "Handwriting expert" },
-  { id: "skillsynq", n: 7, badge: "Speed runner" },
-  { id: "googlefiber", n: 8, badge: "Needle finder" },
-  { id: "accuracy", n: 9, badge: "Second opinion" },
+/**
+ * Two kinds of progress, one store:
+ *  - rooms: each castle room (page section) you've stepped into
+ *  - keys:  each puzzle you've solved (a project's call, the about call, and
+ *           the two mini-games)
+ * Persisted to localStorage so a returning visitor keeps their castle lit.
+ */
+
+export const KEYS = [
+  { id: "about", label: "The Study's riddle" },
+  ...PROJECTS.map((p) => ({ id: p.id, label: p.name })),
+  { id: "seatrace", label: "Seat race" },
+  { id: "accuracy", label: "Second opinion" },
 ] as const;
 
-export type LevelId = (typeof LEVELS)[number]["id"];
+export const TOTAL_ROOMS = ROOMS.length;
+export const TOTAL_KEYS = KEYS.length;
 
-export const TOTAL_LEVELS = LEVELS.length;
-/** One milestone on the way, so the run has a middle and not just an end. */
-export const MILESTONE = 5;
+type Event = { kind: "room" | "key"; id: string; at: number };
 
-export function levelOf(id: string) {
-  return LEVELS.find((l) => l.id === id);
-}
-
-type Snapshot = {
-  cleared: string[];
-  /** Most recent clear, so the toast knows what to celebrate. */
-  last: { id: string; at: number } | null;
+export type Progress = {
+  rooms: RoomId[];
+  keys: string[];
+  /** Most recent unlock, so toasts know what to celebrate. */
+  last: Event | null;
 };
 
-const done = new Set<string>();
+const STORAGE = "sj-castle-v1";
+const EMPTY: Progress = { rooms: [], keys: [], last: null };
+let snapshot: Progress = EMPTY;
+let hydrated = false;
 const subscribers = new Set<() => void>();
-const EMPTY: Snapshot = { cleared: [], last: null };
-let snapshot: Snapshot = EMPTY;
 
-export function clearLevel(id: string) {
-  if (done.has(id)) return;
-  done.add(id);
-  snapshot = { cleared: [...done], last: { id, at: Date.now() } };
+function commit(next: Progress) {
+  snapshot = next;
+  try {
+    window.localStorage.setItem(
+      STORAGE,
+      JSON.stringify({ rooms: next.rooms, keys: next.keys }),
+    );
+  } catch {
+    // Private mode or storage blocked: progress just won't survive a reload.
+  }
   subscribers.forEach((notify) => notify());
+}
+
+export function visitRoom(id: RoomId) {
+  if (snapshot.rooms.includes(id)) return;
+  commit({
+    ...snapshot,
+    rooms: [...snapshot.rooms, id],
+    last: { kind: "room", id, at: Date.now() },
+  });
+}
+
+export function solve(id: string) {
+  if (snapshot.keys.includes(id)) return;
+  commit({
+    ...snapshot,
+    keys: [...snapshot.keys, id],
+    last: { kind: "key", id, at: Date.now() },
+  });
+}
+
+export function resetProgress() {
+  commit(EMPTY);
+}
+
+function hydrate() {
+  hydrated = true;
+  try {
+    const raw = window.localStorage.getItem(STORAGE);
+    if (!raw) return;
+    const saved = JSON.parse(raw) as Partial<Progress>;
+    const rooms = (saved.rooms ?? []).filter((r): r is RoomId =>
+      ROOMS.some((room) => room.id === r),
+    );
+    const keys = (saved.keys ?? []).filter((k) => KEYS.some((key) => key.id === k));
+    snapshot = { rooms, keys, last: null };
+    // Defer so we never notify during a render pass.
+    queueMicrotask(() => subscribers.forEach((notify) => notify()));
+  } catch {}
 }
 
 function subscribe(notify: () => void) {
   subscribers.add(notify);
+  if (!hydrated) hydrate();
   return () => {
     subscribers.delete(notify);
   };
 }
 
-export function useProgress(): Snapshot {
+export function useProgress(): Progress {
   return useSyncExternalStore(
     subscribe,
     () => snapshot,
