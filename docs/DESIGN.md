@@ -161,3 +161,46 @@ dotted surface, minifigure characters / level scenes (`lib/scenes.ts`,
 (`next.svg`, `vercel.svg`, `globe.svg`, `file.svg`, `window.svg`). Keep `seat-race.tsx`
 and `hallucination-game.tsx` logic, restyled, calling `solve("seatrace")` /
 `solve("accuracy")`.
+
+## 7. Reference bar (added after owner review — this overrides §3/§4 where they conflict)
+
+The owner's quality references: vectrfl.com, skyclinics.al, aircenter.space,
+**aimees-papercraft-world.com (favourite)**, kellydev.io. What we take from each:
+
+- **Aimee's Papercraft World** — you are *inside* a crafted diorama. Content is part of
+  the world (pinned paper signs, text on walls), every surface has tactile paper grain,
+  and the frame is dense with tiny whimsical props (lanterns, animals, a pond, a piano).
+  Scroll moves the camera through themed zones. → Our castle gets the same density of
+  small handmade props and a **procedural grain on every material** (generate a small
+  noise `CanvasTexture` at runtime and use it as roughness/bump/color variation — still no
+  texture files). Room signs are pinned clay/paper plaques in the scene.
+- **Vectr** — a single-tint 3D world the camera travels over as you scroll, a glowing
+  path connecting places, a numbered step list (01–04) bottom-left synced to scroll, huge
+  tightly-tracked display headline, minimal pill nav. → **Scroll-driven camera**: the
+  castle is a persistent world, not just a hero. A soft golden dotted path winds between
+  the doors and "fills" as rooms are visited. A numbered room index (01–06) synced to
+  scroll sits bottom-left on desktop.
+- **Skyclinics** — mist, clouds, silence, lots of whitespace, glass/pill nav, widely
+  tracked small caps. → cloud layers and cream fog; restraint in chrome.
+- **AIR** — confident giant letterforms interleaved with a white 3D sculpture. → the hero
+  name set huge, the castle can sit *between/behind* the letters.
+- **Kelly** — personality in the loader. → a short loader (≤1.2s, skipped when cached):
+  the castle's pennant being hoisted, "Raising the drawbridge…", then the scene fades in.
+
+### Revised castle architecture
+
+- `CastleWorld` = a **fixed, full-viewport canvas behind the whole page** (z below content).
+  The page scrolls over it. Camera keyframes: hero wide shot → one framing per room
+  opening in `ROOMS` order → final pull-back on the finished castle for contact. Scroll
+  position between section tops interpolates between keyframes (smooth, damped — never
+  scroll-jacked; native scroll always wins). Entering a room's section swings that door
+  or shutters open and lights it; `visitRoom(id)` still records it.
+- Room content sits on solid clay cards *over* the world (legible — cards are opaque
+  `--card`, never glass over busy 3D). Cards leave the room's opening visible (desktop:
+  cards on one side, opening framed on the other; mobile: the world shows between cards
+  and in each section's header band).
+- Door rail buttons / nav links still work: they smooth-scroll to the section, and the
+  camera follows because it's scroll-driven.
+- Performance: render only while scrolling/animating + low-rate idle loop (≈30fps) for
+  birds/clouds; stop entirely when the tab is hidden; DPR caps as §4. Reduced motion:
+  camera jumps between keyframes with a crossfade, no idle animation.
