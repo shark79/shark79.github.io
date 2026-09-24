@@ -26,7 +26,7 @@ export function About() {
             <p className="font-heading text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
               {s.value}
             </p>
-            <p className="mt-1 text-xs leading-snug text-foreground/70">{s.label}</p>
+            <p className="mt-1 text-xs leading-snug text-foreground">{s.label}</p>
           </div>
         ))}
       </div>
@@ -36,7 +36,7 @@ export function About() {
           <div key={e.degree} className="clay-sm rounded-[var(--radius-md)] bg-card p-4">
             <p className="font-heading text-sm font-semibold">{e.degree}</p>
             <p className="mt-1 text-sm text-muted-foreground">{e.school}</p>
-            <p className="mt-1 font-mono text-[11px] tracking-wide text-muted-foreground/80 uppercase">
+            <p className="mt-1 font-mono text-[11px] tracking-wide text-muted-foreground uppercase">
               {e.meta}
             </p>
           </div>

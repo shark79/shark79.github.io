@@ -21,7 +21,7 @@ export function Experience() {
               <h3 className="mt-1 font-heading text-lg font-semibold tracking-tight">
                 {job.company}
               </h3>
-              <p className="text-sm font-medium text-foreground/70">{job.role}</p>
+              <p className="text-sm font-medium text-foreground">{job.role}</p>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{job.desc}</p>
               <ul className="mt-4 space-y-2">
                 {job.bullets.map((b, i) => (

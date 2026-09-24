@@ -68,7 +68,7 @@ export function RoomIndex() {
                 href={`#${room.id}`}
                 aria-current={isActive ? "true" : undefined}
                 className={cn(
-                  "flex min-h-9 items-center gap-2 rounded-full px-2.5 font-mono text-[11px] tracking-[0.14em] uppercase transition-colors duration-[var(--dur-hover)] ease-[var(--ease-out)]",
+                  "flex min-h-11 items-center gap-2 rounded-full px-2.5 font-mono text-[11px] tracking-[0.14em] uppercase transition-colors duration-[var(--dur-hover)] ease-[var(--ease-out)]",
                   isActive
                     ? "bg-primary/10 text-primary"
                     : "text-muted-foreground hover:text-foreground",
