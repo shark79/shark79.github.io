@@ -27,21 +27,27 @@ let grain: THREE.CanvasTexture | null = null;
 /** One 128px noise canvas, reused (with repeat) across every clay material. */
 function getGrain(): THREE.CanvasTexture {
   if (grain) return grain;
-  const size = 128;
+  // Small + low-contrast + linear-filtered on repeat: reads as soft paper
+  // mottling. A big high-contrast noise map here aliases into hard moiré
+  // bands under minification — the opposite of "tactile grain".
+  const size = 24;
   const canvas = document.createElement("canvas");
   canvas.width = canvas.height = size;
   const ctx = canvas.getContext("2d")!;
   const img = ctx.createImageData(size, size);
   for (let i = 0; i < img.data.length; i += 4) {
-    const v = 195 + Math.random() * 60;
+    const v = 222 + Math.random() * 26;
     img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
     img.data[i + 3] = 255;
   }
   ctx.putImageData(img, 0, 0);
   grain = new THREE.CanvasTexture(canvas);
   grain.wrapS = grain.wrapT = THREE.RepeatWrapping;
-  grain.repeat.set(5, 5);
+  grain.repeat.set(2.5, 2.5);
   grain.colorSpace = THREE.NoColorSpace;
+  grain.generateMipmaps = true;
+  grain.minFilter = THREE.LinearMipmapLinearFilter;
+  grain.magFilter = THREE.LinearFilter;
   return grain;
 }
 
@@ -53,6 +59,10 @@ export function disposeGrain() {
 /* ----------------------------------------------------------------- clay */
 
 export function clay(color: number, opts: { roughness?: number; sheen?: number; bump?: number } = {}) {
+  // Note: normal/bump perturbation is deliberately skipped — on the extruded
+  // arch/leaf shapes (irregular UVs from ExtrudeGeometry) it read as hard
+  // banding under the sheen highlight, not soft grain. roughnessMap alone
+  // gives the tactile variation without that artifact.
   return new THREE.MeshPhysicalMaterial({
     color,
     roughness: opts.roughness ?? 0.78,
@@ -61,8 +71,6 @@ export function clay(color: number, opts: { roughness?: number; sheen?: number; 
     sheenColor: new THREE.Color(0xffffff),
     sheenRoughness: 0.85,
     roughnessMap: getGrain(),
-    bumpMap: getGrain(),
-    bumpScale: opts.bump ?? 0.006,
   });
 }
 
@@ -94,43 +102,52 @@ export function buildIsland(): THREE.Group {
   ];
   const geo = new THREE.LatheGeometry(pts, 28);
   g.add(mesh(geo, COLOR.cream, { roughness: 0.88, sheen: 0.15 }));
-
-  const band = mesh(new THREE.TorusGeometry(4.62, 0.1, 8, 40), COLOR.terracotta, { roughness: 0.7 });
-  band.rotation.x = Math.PI / 2;
-  band.position.y = -0.02;
-  g.add(band);
   return g;
 }
 
-/** A soft bell-curved conical roof via a lathed profile. */
+/** A soft bell-curved conical roof with a slight eave overhang, via a lathed profile. */
 export function bellRoof(baseRadius: number, height: number, color: number) {
   const pts = [
     new THREE.Vector2(0, height),
     new THREE.Vector2(baseRadius * 0.1, height * 0.92),
     new THREE.Vector2(baseRadius * 0.52, height * 0.6),
     new THREE.Vector2(baseRadius * 0.9, height * 0.2),
-    new THREE.Vector2(baseRadius * 1.05, 0.015),
-    new THREE.Vector2(baseRadius, 0),
+    new THREE.Vector2(baseRadius * 1.18, height * 0.05), // eave lip flares past the wall
+    new THREE.Vector2(baseRadius * 1.02, 0),
   ];
   return mesh(new THREE.LatheGeometry(pts, 20), color, { roughness: 0.6, sheen: 0.5 });
 }
 
-/** A tower body: rounded-box wall + stone course strips. Returns the group and its top Y. */
-export function buildTower(w: number, h: number, d: number, wallColor: number, baseY = 0) {
+/**
+ * A tower body: either a rounded-box (the square keep) or a round
+ * cylinder-with-bevelled-cap (corner towers, turret) — plus faint stone
+ * course lines. Returns the group and its top Y.
+ */
+export function buildTower(w: number, h: number, d: number, wallColor: number, baseY = 0, round = false) {
   const g = new THREE.Group();
-  const wall = mesh(roundedBox(w, h, d, 0.1), wallColor, { roughness: 0.82 });
+  let wall: THREE.Mesh;
+  if (round) {
+    const r = w / 2;
+    wall = mesh(new THREE.CylinderGeometry(r * 0.93, r, h, 18), wallColor, { roughness: 0.82 });
+    const cap = mesh(new THREE.TorusGeometry(r * 1.03, r * 0.06, 8, 20), wallColor, { roughness: 0.8 });
+    cap.rotation.x = Math.PI / 2;
+    cap.position.y = baseY + 0.03;
+    g.add(cap);
+  } else {
+    wall = mesh(roundedBox(w, h, d, 0.14), wallColor, { roughness: 0.82 });
+  }
   wall.position.y = baseY + h / 2;
   g.add(wall);
 
   const courses = 3;
   for (let i = 1; i <= courses; i++) {
-    const strip = mesh(
-      roundedBox(w + 0.015, 0.04, d + 0.015, 0.02, 1),
-      COLOR.ink,
-      { roughness: 0.9, bump: 0.002 },
-    );
-    (strip.material as THREE.MeshPhysicalMaterial).opacity = 0.08;
-    (strip.material as THREE.MeshPhysicalMaterial).transparent = true;
+    const strip = round
+      ? mesh(new THREE.TorusGeometry((w / 2) * 0.965, 0.014, 6, 18), COLOR.ink, { roughness: 0.9 })
+      : mesh(roundedBox(w + 0.015, 0.03, d + 0.015, 0.02, 1), COLOR.ink, { roughness: 0.9 });
+    if (round) strip.rotation.x = Math.PI / 2;
+    const mat = strip.material as THREE.MeshPhysicalMaterial;
+    mat.opacity = 0.14;
+    mat.transparent = true;
     strip.position.y = baseY + (h * i) / (courses + 1);
     strip.castShadow = false;
     g.add(strip);
@@ -196,46 +213,63 @@ export function buildOpening(
   const frameColor = COLOR.cream;
   const leafColor = COLOR.terracotta;
 
-  // Recess so the opening reads as a hole, not a decal.
+  // Recess so the opening reads as a hole, not a decal. Arched gates have a
+  // fanlight above the door line, so give them extra headroom.
+  const recessH = kind === "arch" ? h * 1.3 : h * 0.96;
+  const recessOffsetY = kind === "arch" ? h * 0.12 : 0;
   const recess = new THREE.Mesh(
-    new THREE.PlaneGeometry(w * 0.96, h * 0.96),
+    new THREE.PlaneGeometry(w * 0.96, recessH),
     new THREE.MeshBasicMaterial({ color: 0x2a1b14 }),
   );
-  recess.position.z = -0.04;
+  recess.position.set(0, recessOffsetY, -0.04);
   group.add(recess);
 
   const glow = new THREE.Mesh(
-    new THREE.PlaneGeometry(w * 0.9, h * 0.9),
+    new THREE.PlaneGeometry(w * 0.9, recessH * 0.94),
     new THREE.MeshBasicMaterial({ color: COLOR.butter, transparent: true, opacity: 0 }),
   );
-  glow.position.z = -0.035;
+  glow.position.set(0, recessOffsetY, -0.035);
   group.add(glow);
 
   const light = new THREE.PointLight(COLOR.butter, 0, 3.2, 2);
   light.position.set(0, 0, 0.3);
   group.add(light);
 
+  // `hingeX` is where the leaf's outer edge (the hinge) sits. The leaf
+  // geometry is `|hingeX|` wide and centered on its own origin, so within the
+  // pivot (which sits AT the hinge) its center must be offset by half that —
+  // not the full `hingeX`, which would double-place it back near center.
   function addLeaf(leafMesh: THREE.Mesh, hingeX: number, side: 1 | -1, maxOpen: number) {
     const pivot = new THREE.Group();
     pivot.position.x = hingeX;
-    leafMesh.position.x = -hingeX;
+    leafMesh.position.x = -hingeX / 2;
     pivot.add(leafMesh);
     group.add(pivot);
     leaves.push({ pivot, axis: "y", openSign: side, maxOpen });
   }
 
   if (kind === "arch") {
+    // A rectangular double door (built from the same well-tested primitive as the
+    // windows) under a flat fanlight transom — reads as an arched gate without the
+    // custom Shape/ExtrudeGeometry triangulation that banded badly on a tall door.
     const hw = w / 2;
-    const straightH = h * 0.62;
-    const frame = new THREE.Mesh(archExtrude(hw + 0.05, straightH + 0.06, hw + 0.05, 0.1), clay(frameColor));
-    frame.position.z = -0.02;
-    frame.castShadow = true;
-    group.add(frame);
-    const left = new THREE.Mesh(archExtrude(hw, straightH, hw, 0.06, "left"), clay(leafColor, { roughness: 0.55, sheen: 0.5 }));
-    const right = new THREE.Mesh(archExtrude(hw, straightH, hw, 0.06, "right"), clay(leafColor, { roughness: 0.55, sheen: 0.5 }));
-    left.castShadow = right.castShadow = true;
-    addLeaf(left, 0, -1, 1.9);
-    addLeaf(right, 0, 1, 1.9);
+    const doorH = h * 0.76;
+    const transomR = hw + 0.04;
+    const fan = new THREE.Mesh(
+      new THREE.CircleGeometry(transomR, 20, 0, Math.PI),
+      clay(frameColor, { roughness: 0.7 }),
+    );
+    fan.position.set(0, doorH, -0.015);
+    group.add(fan);
+    const fanRim = new THREE.Mesh(new THREE.TorusGeometry(transomR, 0.03, 6, 20, Math.PI), clay(leafColor, { roughness: 0.55, sheen: 0.5 }));
+    fanRim.position.set(0, doorH, -0.01);
+    group.add(fanRim);
+
+    const leftM = mesh(roundedBox(hw - 0.01, doorH, 0.07, 0.04, 1), leafColor, { roughness: 0.55, sheen: 0.5 });
+    const rightM = mesh(roundedBox(hw - 0.01, doorH, 0.07, 0.04, 1), leafColor, { roughness: 0.55, sheen: 0.5 });
+    leftM.position.y = rightM.position.y = doorH / 2 - h / 2;
+    addLeaf(leftM, -hw, -1, 1.9);
+    addLeaf(rightM, hw, 1, 1.9);
   } else if (kind === "round") {
     const r = w / 2;
     const left = new THREE.Mesh(halfDiscExtrude(r, "left"), clay(leafColor, { roughness: 0.6, sheen: 0.5 }));
@@ -262,8 +296,12 @@ export function buildOpening(
     addLeaf(rightM, hw, 1, kind === "double" ? 2.0 : 1.75);
   }
 
+  // Modest, not-too-generous padding: several openings stack close together
+  // on the same facade, and an over-padded hit box swallows its neighbor's
+  // clicks. Not using `recessH` here on purpose — the fanlight doesn't need
+  // full hover coverage, correct room targeting matters more.
   const hit = new THREE.Mesh(
-    new THREE.BoxGeometry(w + 0.35, h + 0.35, 0.7),
+    new THREE.BoxGeometry(w + 0.14, h + 0.14, 0.6),
     new THREE.MeshBasicMaterial({ visible: false }),
   );
   hit.userData.roomId = id;
@@ -277,40 +315,14 @@ export function buildOpening(
   return { id, group, leaves, light, glow, hit, anchor: anchor.clone() };
 }
 
-function archExtrude(hw: number, straightH: number, arcR: number, depth: number, half?: "left" | "right") {
-  const shape = new THREE.Shape();
-  const segs = 14;
-  if (!half) {
-    shape.moveTo(-hw, 0);
-    shape.lineTo(-hw, straightH);
-    for (let i = 0; i <= segs; i++) {
-      const a = Math.PI - (Math.PI * i) / segs;
-      shape.lineTo(Math.cos(a) * arcR, straightH + Math.sin(a) * arcR);
-    }
-    shape.lineTo(hw, 0);
-    shape.closePath();
-  } else {
-    const sign = half === "right" ? 1 : -1;
-    shape.moveTo(0, 0);
-    shape.lineTo(sign * hw, 0);
-    shape.lineTo(sign * hw, straightH);
-    for (let i = 1; i <= segs / 2; i++) {
-      const a = (Math.PI / 2) * (i / (segs / 2));
-      shape.lineTo(sign * Math.cos(a) * arcR, straightH + Math.sin(a) * arcR);
-    }
-    shape.lineTo(0, 0);
-  }
-  const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelSize: 0.012, bevelThickness: 0.012, bevelSegments: 2 });
-  geo.translate(0, 0, -depth / 2);
-  return geo;
-}
-
 function halfDiscExtrude(r: number, side: "left" | "right") {
   const shape = new THREE.Shape();
   const sign = side === "right" ? 1 : -1;
   shape.moveTo(0, -r);
   const segs = 16;
-  for (let i = 0; i <= segs; i++) {
+  // Start at i=1: i=0 would duplicate the moveTo point with a zero-length
+  // segment, which triangulated into visible banding on the door leaves.
+  for (let i = 1; i <= segs; i++) {
     const a = -Math.PI / 2 + (Math.PI * i) / segs;
     shape.lineTo(sign * Math.cos(a) * r, Math.sin(a) * r);
   }
@@ -343,44 +355,56 @@ export function buildFlowerBox(width: number) {
   return g;
 }
 
-export function buildIvy(count: number, spreadW: number, spreadH: number) {
-  const geo = new THREE.SphereGeometry(0.03, 5, 4);
-  const inst = new THREE.InstancedMesh(geo, clay(COLOR.apricot, { roughness: 0.7 }), count);
-  const dummy = new THREE.Object3D();
-  for (let i = 0; i < count; i++) {
-    dummy.position.set((Math.random() - 0.5) * spreadW, Math.random() * spreadH, 0.02 + Math.random() * 0.03);
-    dummy.scale.setScalar(0.6 + Math.random() * 0.8);
-    dummy.updateMatrix();
-    inst.setMatrixAt(i, dummy.matrix);
-  }
-  return inst;
+let puffGeo: THREE.SphereGeometry | null = null;
+/** Shared smooth-sphere puff geometry (12x8 segments — round, not faceted) for every cloud. */
+function cloudPuffGeometry() {
+  puffGeo ??= new THREE.SphereGeometry(1, 12, 8);
+  return puffGeo;
 }
 
-/** A handful of drifting cloud puffs, instanced. Caller drives `.rotation.y`/position for drift. */
+/** A handful of soft, fewer-but-bigger drifting cloud puffs, instanced. */
 export function buildCloudField(count: number, radius: number, yRange: [number, number]) {
-  const puff = new THREE.IcosahedronGeometry(1, 0);
-  const inst = new THREE.InstancedMesh(puff, clay(COLOR.cream, { roughness: 0.95, sheen: 0.05 }), count * 5);
+  const inst = new THREE.InstancedMesh(cloudPuffGeometry(), clay(COLOR.cream, { roughness: 0.96, sheen: 0.08 }), count * 4);
   const dummy = new THREE.Object3D();
   let idx = 0;
   const clouds: { angle: number; r: number; y: number; speed: number }[] = [];
   for (let c = 0; c < count; c++) {
     const angle = Math.random() * Math.PI * 2;
-    const r = radius * (0.7 + Math.random() * 0.6);
+    const r = radius * (0.75 + Math.random() * 0.5);
     const y = yRange[0] + Math.random() * (yRange[1] - yRange[0]);
-    const speed = 0.02 + Math.random() * 0.03;
+    const speed = 0.015 + Math.random() * 0.02;
     clouds.push({ angle, r, y, speed });
     const cx = Math.cos(angle) * r;
     const cz = Math.sin(angle) * r;
-    const puffs = 5;
+    const puffs = 4;
     for (let p = 0; p < puffs; p++) {
-      dummy.position.set(cx + (Math.random() - 0.5) * 1.4, y + (Math.random() - 0.5) * 0.3, cz + (Math.random() - 0.5) * 0.8);
-      dummy.scale.setScalar(0.45 + Math.random() * 0.5);
+      dummy.position.set(cx + (Math.random() - 0.5) * 1.1, y + (Math.random() - 0.5) * 0.16, cz + (Math.random() - 0.5) * 0.6);
+      const s = 0.32 + Math.random() * 0.3;
+      dummy.scale.set(s, s * 0.62, s);
       dummy.updateMatrix();
       inst.setMatrixAt(idx++, dummy.matrix);
     }
   }
   inst.frustumCulled = false;
   return { mesh: inst, clouds };
+}
+
+/** A ring of soft cloud puffs around the island's rim — the "floating on clouds" skirt
+ * that replaces a hard disc edge. */
+export function buildCloudSkirt(count: number, radius: number, y: number) {
+  const inst = new THREE.InstancedMesh(cloudPuffGeometry(), clay(COLOR.cream, { roughness: 0.95, sheen: 0.1 }), count);
+  const dummy = new THREE.Object3D();
+  for (let i = 0; i < count; i++) {
+    const a = (i / count) * Math.PI * 2 + Math.random() * 0.2;
+    const r = radius * (0.94 + Math.random() * 0.18);
+    const s = 0.5 + Math.random() * 0.45;
+    dummy.position.set(Math.cos(a) * r, y + (Math.random() - 0.5) * 0.3, Math.sin(a) * r);
+    dummy.scale.set(s, s * 0.65, s);
+    dummy.updateMatrix();
+    inst.setMatrixAt(i, dummy.matrix);
+  }
+  inst.frustumCulled = false;
+  return inst;
 }
 
 export function buildBird() {
@@ -629,17 +653,32 @@ export function buildConfetti(count: number, origin: THREE.Vector3) {
   return { mesh: inst, pos, vel, rot, count };
 }
 
-/** A dotted golden path between waypoints, split into per-room segments so each can "light" independently. */
+let dotGeo: THREE.CylinderGeometry | null = null;
+function pathDotGeometry() {
+  dotGeo ??= new THREE.CylinderGeometry(0.045, 0.05, 0.022, 8);
+  return dotGeo;
+}
+
+/** A soft dotted path between waypoints — small rounded discs along a CatmullRom curve,
+ * split into per-room segments so each can "light" independently as rooms are visited. */
 export function buildPath(points: THREE.Vector3[]) {
-  const segments: THREE.Mesh[] = [];
+  const segments: THREE.InstancedMesh[] = [];
   const g = new THREE.Group();
+  const dummy = new THREE.Object3D();
   for (let i = 0; i < points.length - 1; i++) {
     const curve = new THREE.CatmullRomCurve3([points[i], points[i].clone().lerp(points[i + 1], 0.5).setY(0.02), points[i + 1]]);
-    const geo = new THREE.TubeGeometry(curve, 12, 0.03, 6, false);
-    const m = new THREE.Mesh(
-      geo,
-      new THREE.MeshStandardMaterial({ color: COLOR.cream, roughness: 0.6, emissive: COLOR.butter, emissiveIntensity: 0 }),
+    const dotsPerSegment = 7;
+    const m = new THREE.InstancedMesh(
+      pathDotGeometry(),
+      new THREE.MeshStandardMaterial({ color: COLOR.cream, roughness: 0.55, emissive: COLOR.butter, emissiveIntensity: 0 }),
+      dotsPerSegment,
     );
+    for (let d = 0; d < dotsPerSegment; d++) {
+      const p = curve.getPoint((d + 0.5) / dotsPerSegment);
+      dummy.position.set(p.x, 0.015, p.z);
+      dummy.updateMatrix();
+      m.setMatrixAt(d, dummy.matrix);
+    }
     m.receiveShadow = true;
     segments.push(m);
     g.add(m);
