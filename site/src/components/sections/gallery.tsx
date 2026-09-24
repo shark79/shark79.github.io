@@ -1,24 +1,15 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import Image from "next/image";
 import { ChevronLeft, ChevronRight } from "lucide-react";
+import { PHOTOS, ROOMS } from "@/lib/content";
+import { RoomShell } from "@/components/ui/room-shell";
+import { openPaintingLightbox } from "@/components/ui/painting-lightbox";
+import { cn } from "@/lib/utils";
 
-const PHOTOS = [
-  "IMG_0148.jpg",
-  "IMG_0150.jpg",
-  "IMG_0158.jpg",
-  "IMG_0161.jpg",
-  "IMG_0170.jpg",
-  "IMG_0249.jpg",
-  "IMG_0369.jpg",
-  "IMG_0722.jpg",
-  "IMG_1234.jpg",
-  "IMG_1369.jpg",
-  "IMG_2609.jpg",
-  "IMG_3560.jpg",
-  "IMG_4732.jpg",
-];
+const room = ROOMS.find((r) => r.id === "gallery")!;
+
+const FRAMES = ["clay-blush", "clay-apricot", "clay-butter", "clay-cream"] as const;
 
 export function Gallery() {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -29,10 +20,9 @@ export function Gallery() {
     const track = trackRef.current;
     if (!track) return;
 
-    // React's synthetic onWheel is passive by default, so preventDefault()
-    // inside it throws. A plain mouse wheel has no horizontal delta, so
-    // this translates vertical scroll into horizontal movement for mouse
-    // users (trackpads already send deltaX and keep working natively).
+    // A plain mouse wheel has no horizontal delta — translate vertical
+    // scroll into horizontal movement (trackpads send deltaX and already
+    // work natively).
     const handleWheel = (e: WheelEvent) => {
       if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
         track.scrollLeft += e.deltaY;
@@ -40,19 +30,11 @@ export function Gallery() {
       }
     };
 
-    // scroll-snap-align combined with the track's own side padding means
-    // the natural "resting" scrollLeft at the very first photo isn't 0 —
-    // it settles at roughly the padding width. Capture that as the real
-    // baseline instead of assuming 0, so the left arrow correctly starts
-    // disabled.
     let startScrollLeft: number | null = null;
-
     const updateArrowState = () => {
       if (startScrollLeft === null) startScrollLeft = track.scrollLeft;
       setCanScrollLeft(track.scrollLeft > startScrollLeft + 4);
-      setCanScrollRight(
-        track.scrollLeft < track.scrollWidth - track.clientWidth - 4
-      );
+      setCanScrollRight(track.scrollLeft < track.scrollWidth - track.clientWidth - 4);
     };
 
     updateArrowState();
@@ -69,43 +51,59 @@ export function Gallery() {
   const scrollByOne = (direction: 1 | -1) => {
     const track = trackRef.current;
     if (!track) return;
-    const tile = track.querySelector<HTMLElement>("[data-gallery-tile]");
-    const gap = 16; // matches gap-4
-    const step = (tile?.offsetWidth ?? 320) + gap;
+    const frame = track.querySelector<HTMLElement>("[data-gallery-frame]");
+    const gap = 28;
+    const step = (frame?.offsetWidth ?? 200) + gap;
     track.scrollBy({ left: direction * step, behavior: "smooth" });
   };
 
   return (
-    <section id="gallery" className="border-b border-border py-24">
-      <div className="mx-auto mb-12 max-w-5xl px-6 sm:px-10">
-        <div className="glass-panel flex items-baseline gap-6 px-6 py-5 sm:px-8">
-          <span className="font-mono text-xs text-muted-foreground">05</span>
-          <h2 className="font-heading text-3xl font-semibold tracking-tight sm:text-4xl">
-            Off the clock
-          </h2>
-        </div>
-      </div>
+    <RoomShell room={room}>
+      <div className="relative -mx-5 sm:-mx-8 lg:mx-0">
+        {/* the cord the frames hang from */}
+        <div
+          aria-hidden="true"
+          className="pointer-events-none absolute inset-x-5 top-10 border-t border-dashed border-border sm:inset-x-8 lg:inset-x-0"
+        />
 
-      <div className="relative">
         <div
           ref={trackRef}
-          className="scrollbar-none flex snap-x snap-mandatory gap-4 overflow-x-auto px-6 pb-4 sm:px-10"
+          className="scrollbar-none flex gap-7 overflow-x-auto px-5 pt-10 pb-3 sm:px-8 lg:px-0"
         >
           {PHOTOS.map((file, i) => (
-            <div
+            <button
               key={file}
-              data-gallery-tile
-              className="relative aspect-[4/5] w-[70vw] flex-none snap-start overflow-hidden rounded-lg border border-border sm:w-[320px]"
+              type="button"
+              data-gallery-frame
+              onClick={() => openPaintingLightbox(file)}
+              aria-label={`View photo ${i + 1} of ${PHOTOS.length}`}
+              className="group relative shrink-0"
             >
-              <Image
-                src={`/gallery/${file}`}
-                alt=""
-                fill
-                sizes="(max-width: 640px) 70vw, 320px"
-                className="gallery-img object-cover transition-transform duration-500 hover:scale-105"
-                priority={i < 2}
+              <span
+                aria-hidden="true"
+                className="absolute -top-[26px] left-1/2 h-[26px] w-px -translate-x-1/2 bg-border"
               />
-            </div>
+              <span
+                aria-hidden="true"
+                className="clay-pin absolute -top-[31px] left-1/2 -translate-x-1/2"
+              />
+              <div
+                className={cn(
+                  "clay-sm clay-interactive rounded-[var(--radius-md)] p-2",
+                  FRAMES[i % FRAMES.length],
+                )}
+              >
+                <div className="relative aspect-[4/5] w-[58vw] max-w-[220px] overflow-hidden rounded-[16px] sm:w-[190px]">
+                  {/* eslint-disable-next-line @next/next/no-img-element -- 640px pre-sized painting texture, static export */}
+                  <img
+                    src={`/gallery/paintings/${file}`}
+                    alt=""
+                    loading="lazy"
+                    className="gallery-img absolute inset-0 h-full w-full object-cover"
+                  />
+                </div>
+              </div>
+            </button>
           ))}
         </div>
 
@@ -114,7 +112,7 @@ export function Gallery() {
           onClick={() => scrollByOne(-1)}
           disabled={!canScrollLeft}
           aria-label="Scroll gallery left"
-          className="gallery-arrow left-2 sm:left-4"
+          className="clay-sm clay-interactive absolute top-[calc(50%+20px)] left-1 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-card text-foreground disabled:pointer-events-none disabled:opacity-0 sm:left-3"
         >
           <ChevronLeft className="size-5" />
         </button>
@@ -123,11 +121,11 @@ export function Gallery() {
           onClick={() => scrollByOne(1)}
           disabled={!canScrollRight}
           aria-label="Scroll gallery right"
-          className="gallery-arrow right-2 sm:right-4"
+          className="clay-sm clay-interactive absolute top-[calc(50%+20px)] right-1 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-card text-foreground disabled:pointer-events-none disabled:opacity-0 sm:right-3"
         >
           <ChevronRight className="size-5" />
         </button>
       </div>
-    </section>
+    </RoomShell>
   );
 }

@@ -1,18 +1,20 @@
+import { PROFILE } from "@/lib/content";
+
 export function Footer() {
   return (
-    <footer className="mx-auto flex w-full max-w-5xl flex-col items-center justify-between gap-2 border-t border-border px-6 py-6 font-mono text-[11px] uppercase tracking-widest text-muted-foreground sm:flex-row sm:px-10">
+    <footer className="relative z-20 mx-auto flex w-full max-w-5xl flex-col items-center justify-between gap-2 px-6 py-10 text-center font-mono text-[11px] tracking-widest text-muted-foreground uppercase sm:flex-row sm:text-left">
       <p>
-        Shashank Jamkhandi ·{" "}
+        {PROFILE.name} ·{" "}
         <a
-          href="https://github.com/shark79/shark79.github.io"
+          href={PROFILE.source}
           target="_blank"
           rel="noreferrer"
-          className="text-primary"
+          className="text-primary transition-colors hover:text-foreground"
         >
           source
         </a>
       </p>
-      <p>Built from scratch · 2026</p>
+      <p>Built by hand · 2026</p>
     </footer>
   );
 }

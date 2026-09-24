@@ -1,0 +1,648 @@
+import * as THREE from "three";
+import { RoundedBoxGeometry } from "three/addons/geometries/RoundedBoxGeometry.js";
+import type { RoomId } from "@/lib/content";
+
+/**
+ * Procedural clay geometry + materials for the castle. Everything here is
+ * built from primitives at runtime — no model or texture files. A single
+ * small noise canvas gives every clay surface tactile paper-grain.
+ */
+
+export const COLOR = {
+  blush: 0xf6b8ae,
+  apricot: 0xf9cba0,
+  butter: 0xfbe6a6,
+  cream: 0xfff3df,
+  terracotta: 0xc4523f,
+  inkOrange: 0xa8561a,
+  ink: 0x1b1714,
+  bg: 0xfbf7f1,
+  sage: 0xc9d6ad, // just for the pond water; kept muted so it doesn't fight the warm palette
+} as const;
+
+/* ------------------------------------------------------------- grain map */
+
+let grain: THREE.CanvasTexture | null = null;
+
+/** One 128px noise canvas, reused (with repeat) across every clay material. */
+function getGrain(): THREE.CanvasTexture {
+  if (grain) return grain;
+  const size = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = canvas.height = size;
+  const ctx = canvas.getContext("2d")!;
+  const img = ctx.createImageData(size, size);
+  for (let i = 0; i < img.data.length; i += 4) {
+    const v = 195 + Math.random() * 60;
+    img.data[i] = img.data[i + 1] = img.data[i + 2] = v;
+    img.data[i + 3] = 255;
+  }
+  ctx.putImageData(img, 0, 0);
+  grain = new THREE.CanvasTexture(canvas);
+  grain.wrapS = grain.wrapT = THREE.RepeatWrapping;
+  grain.repeat.set(5, 5);
+  grain.colorSpace = THREE.NoColorSpace;
+  return grain;
+}
+
+export function disposeGrain() {
+  grain?.dispose();
+  grain = null;
+}
+
+/* ----------------------------------------------------------------- clay */
+
+export function clay(color: number, opts: { roughness?: number; sheen?: number; bump?: number } = {}) {
+  return new THREE.MeshPhysicalMaterial({
+    color,
+    roughness: opts.roughness ?? 0.78,
+    metalness: 0,
+    sheen: opts.sheen ?? 0.35,
+    sheenColor: new THREE.Color(0xffffff),
+    sheenRoughness: 0.85,
+    roughnessMap: getGrain(),
+    bumpMap: getGrain(),
+    bumpScale: opts.bump ?? 0.006,
+  });
+}
+
+export function roundedBox(w: number, h: number, d: number, radius = 0.08, segments = 2) {
+  return new RoundedBoxGeometry(w, h, d, segments, radius);
+}
+
+function mesh(geo: THREE.BufferGeometry, color: number, opts?: Parameters<typeof clay>[1]) {
+  const m = new THREE.Mesh(geo, clay(color, opts));
+  m.castShadow = true;
+  m.receiveShadow = true;
+  return m;
+}
+
+/* ------------------------------------------------------------- island & roofs */
+
+/** A rounded-top mesa that tapers to a point underneath — the classic floating island trick. */
+export function buildIsland(): THREE.Group {
+  const g = new THREE.Group();
+  const pts = [
+    new THREE.Vector2(0, 0),
+    new THREE.Vector2(3.9, 0),
+    new THREE.Vector2(4.55, -0.22),
+    new THREE.Vector2(4.7, -0.5),
+    new THREE.Vector2(4.25, -0.9),
+    new THREE.Vector2(2.7, -1.55),
+    new THREE.Vector2(0.9, -2.15),
+    new THREE.Vector2(0, -2.35),
+  ];
+  const geo = new THREE.LatheGeometry(pts, 28);
+  g.add(mesh(geo, COLOR.cream, { roughness: 0.88, sheen: 0.15 }));
+
+  const band = mesh(new THREE.TorusGeometry(4.62, 0.1, 8, 40), COLOR.terracotta, { roughness: 0.7 });
+  band.rotation.x = Math.PI / 2;
+  band.position.y = -0.02;
+  g.add(band);
+  return g;
+}
+
+/** A soft bell-curved conical roof via a lathed profile. */
+export function bellRoof(baseRadius: number, height: number, color: number) {
+  const pts = [
+    new THREE.Vector2(0, height),
+    new THREE.Vector2(baseRadius * 0.1, height * 0.92),
+    new THREE.Vector2(baseRadius * 0.52, height * 0.6),
+    new THREE.Vector2(baseRadius * 0.9, height * 0.2),
+    new THREE.Vector2(baseRadius * 1.05, 0.015),
+    new THREE.Vector2(baseRadius, 0),
+  ];
+  return mesh(new THREE.LatheGeometry(pts, 20), color, { roughness: 0.6, sheen: 0.5 });
+}
+
+/** A tower body: rounded-box wall + stone course strips. Returns the group and its top Y. */
+export function buildTower(w: number, h: number, d: number, wallColor: number, baseY = 0) {
+  const g = new THREE.Group();
+  const wall = mesh(roundedBox(w, h, d, 0.1), wallColor, { roughness: 0.82 });
+  wall.position.y = baseY + h / 2;
+  g.add(wall);
+
+  const courses = 3;
+  for (let i = 1; i <= courses; i++) {
+    const strip = mesh(
+      roundedBox(w + 0.015, 0.04, d + 0.015, 0.02, 1),
+      COLOR.ink,
+      { roughness: 0.9, bump: 0.002 },
+    );
+    (strip.material as THREE.MeshPhysicalMaterial).opacity = 0.08;
+    (strip.material as THREE.MeshPhysicalMaterial).transparent = true;
+    strip.position.y = baseY + (h * i) / (courses + 1);
+    strip.castShadow = false;
+    g.add(strip);
+  }
+  return { group: g, topY: baseY + h };
+}
+
+/* --------------------------------------------------------------- openings */
+
+export type Leaf = { pivot: THREE.Group; axis: "x" | "y"; openSign: 1 | -1; maxOpen: number };
+
+export type OpeningRig = {
+  id: RoomId;
+  group: THREE.Group;
+  leaves: Leaf[];
+  light: THREE.PointLight;
+  glow: THREE.Mesh;
+  hit: THREE.Mesh;
+  anchor: THREE.Vector3;
+};
+
+function pinnedSign(label: string): THREE.Group {
+  const g = new THREE.Group();
+  const canvas = document.createElement("canvas");
+  canvas.width = 96;
+  canvas.height = 56;
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#FFF3DF";
+  ctx.fillRect(0, 0, 96, 56);
+  ctx.fillStyle = "#1B1714";
+  ctx.font = "700 30px Georgia, serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(label, 48, 30);
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const board = new THREE.Mesh(
+    roundedBox(0.32, 0.19, 0.025, 0.02, 1),
+    new THREE.MeshPhysicalMaterial({ map: tex, roughness: 0.7, metalness: 0 }),
+  );
+  board.castShadow = true;
+  const pin = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6), clay(COLOR.inkOrange, { roughness: 0.4 }));
+  pin.position.y = 0.075;
+  g.add(board, pin);
+  return g;
+}
+
+type OpeningKind = "arch" | "window" | "double" | "round" | "flap";
+
+/** Builds one door/shutter/hatch opening: leaves, an interior light, a lit-glow pane, a hit box, and a pinned number sign. */
+export function buildOpening(
+  id: RoomId,
+  n: string,
+  kind: OpeningKind,
+  w: number,
+  h: number,
+  anchor: THREE.Vector3,
+): OpeningRig {
+  const group = new THREE.Group();
+  group.position.copy(anchor);
+
+  const leaves: Leaf[] = [];
+  const frameColor = COLOR.cream;
+  const leafColor = COLOR.terracotta;
+
+  // Recess so the opening reads as a hole, not a decal.
+  const recess = new THREE.Mesh(
+    new THREE.PlaneGeometry(w * 0.96, h * 0.96),
+    new THREE.MeshBasicMaterial({ color: 0x2a1b14 }),
+  );
+  recess.position.z = -0.04;
+  group.add(recess);
+
+  const glow = new THREE.Mesh(
+    new THREE.PlaneGeometry(w * 0.9, h * 0.9),
+    new THREE.MeshBasicMaterial({ color: COLOR.butter, transparent: true, opacity: 0 }),
+  );
+  glow.position.z = -0.035;
+  group.add(glow);
+
+  const light = new THREE.PointLight(COLOR.butter, 0, 3.2, 2);
+  light.position.set(0, 0, 0.3);
+  group.add(light);
+
+  function addLeaf(leafMesh: THREE.Mesh, hingeX: number, side: 1 | -1, maxOpen: number) {
+    const pivot = new THREE.Group();
+    pivot.position.x = hingeX;
+    leafMesh.position.x = -hingeX;
+    pivot.add(leafMesh);
+    group.add(pivot);
+    leaves.push({ pivot, axis: "y", openSign: side, maxOpen });
+  }
+
+  if (kind === "arch") {
+    const hw = w / 2;
+    const straightH = h * 0.62;
+    const frame = new THREE.Mesh(archExtrude(hw + 0.05, straightH + 0.06, hw + 0.05, 0.1), clay(frameColor));
+    frame.position.z = -0.02;
+    frame.castShadow = true;
+    group.add(frame);
+    const left = new THREE.Mesh(archExtrude(hw, straightH, hw, 0.06, "left"), clay(leafColor, { roughness: 0.55, sheen: 0.5 }));
+    const right = new THREE.Mesh(archExtrude(hw, straightH, hw, 0.06, "right"), clay(leafColor, { roughness: 0.55, sheen: 0.5 }));
+    left.castShadow = right.castShadow = true;
+    addLeaf(left, 0, -1, 1.9);
+    addLeaf(right, 0, 1, 1.9);
+  } else if (kind === "round") {
+    const r = w / 2;
+    const left = new THREE.Mesh(halfDiscExtrude(r, "left"), clay(leafColor, { roughness: 0.6, sheen: 0.5 }));
+    const right = new THREE.Mesh(halfDiscExtrude(r, "right"), clay(leafColor, { roughness: 0.6, sheen: 0.5 }));
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(r + 0.03, 0.035, 8, 24), clay(frameColor));
+    ring.position.z = -0.02;
+    group.add(ring);
+    addLeaf(left, 0, -1, 1.7);
+    addLeaf(right, 0, 1, 1.7);
+  } else if (kind === "flap") {
+    const flap = mesh(roundedBox(w, h, 0.05, 0.03, 1), leafColor, { roughness: 0.6, sheen: 0.5 });
+    const pivot = new THREE.Group();
+    pivot.position.y = -h / 2;
+    flap.position.y = h / 2;
+    pivot.add(flap);
+    group.add(pivot);
+    leaves.push({ pivot, axis: "x", openSign: -1, maxOpen: 1.4 });
+  } else {
+    // window (single-wide shutters) or double (balcony doors) — same rectangular-leaf pattern
+    const hw = w / 2;
+    const leftM = mesh(roundedBox(hw, h, 0.06, 0.03, 1), leafColor, { roughness: 0.6, sheen: 0.5 });
+    const rightM = mesh(roundedBox(hw, h, 0.06, 0.03, 1), leafColor, { roughness: 0.6, sheen: 0.5 });
+    addLeaf(leftM, -hw, -1, kind === "double" ? 2.0 : 1.75);
+    addLeaf(rightM, hw, 1, kind === "double" ? 2.0 : 1.75);
+  }
+
+  const hit = new THREE.Mesh(
+    new THREE.BoxGeometry(w + 0.35, h + 0.35, 0.7),
+    new THREE.MeshBasicMaterial({ visible: false }),
+  );
+  hit.userData.roomId = id;
+  group.add(hit);
+
+  const sign = pinnedSign(n);
+  sign.position.set(w / 2 + 0.24, h / 2 + 0.1, 0.15);
+  sign.rotation.z = -0.08;
+  group.add(sign);
+
+  return { id, group, leaves, light, glow, hit, anchor: anchor.clone() };
+}
+
+function archExtrude(hw: number, straightH: number, arcR: number, depth: number, half?: "left" | "right") {
+  const shape = new THREE.Shape();
+  const segs = 14;
+  if (!half) {
+    shape.moveTo(-hw, 0);
+    shape.lineTo(-hw, straightH);
+    for (let i = 0; i <= segs; i++) {
+      const a = Math.PI - (Math.PI * i) / segs;
+      shape.lineTo(Math.cos(a) * arcR, straightH + Math.sin(a) * arcR);
+    }
+    shape.lineTo(hw, 0);
+    shape.closePath();
+  } else {
+    const sign = half === "right" ? 1 : -1;
+    shape.moveTo(0, 0);
+    shape.lineTo(sign * hw, 0);
+    shape.lineTo(sign * hw, straightH);
+    for (let i = 1; i <= segs / 2; i++) {
+      const a = (Math.PI / 2) * (i / (segs / 2));
+      shape.lineTo(sign * Math.cos(a) * arcR, straightH + Math.sin(a) * arcR);
+    }
+    shape.lineTo(0, 0);
+  }
+  const geo = new THREE.ExtrudeGeometry(shape, { depth, bevelEnabled: true, bevelSize: 0.012, bevelThickness: 0.012, bevelSegments: 2 });
+  geo.translate(0, 0, -depth / 2);
+  return geo;
+}
+
+function halfDiscExtrude(r: number, side: "left" | "right") {
+  const shape = new THREE.Shape();
+  const sign = side === "right" ? 1 : -1;
+  shape.moveTo(0, -r);
+  const segs = 16;
+  for (let i = 0; i <= segs; i++) {
+    const a = -Math.PI / 2 + (Math.PI * i) / segs;
+    shape.lineTo(sign * Math.cos(a) * r, Math.sin(a) * r);
+  }
+  shape.lineTo(0, -r);
+  const geo = new THREE.ExtrudeGeometry(shape, { depth: 0.05, bevelEnabled: true, bevelSize: 0.01, bevelThickness: 0.01, bevelSegments: 1 });
+  geo.translate(0, 0, -0.025);
+  return geo;
+}
+
+/* -------------------------------------------------------------- props */
+
+export function buildFlowerBox(width: number) {
+  const g = new THREE.Group();
+  const box = mesh(roundedBox(width, 0.14, 0.14, 0.02, 1), COLOR.terracotta, { roughness: 0.75 });
+  g.add(box);
+  const count = Math.max(3, Math.round(width * 6));
+  const bud = new THREE.SphereGeometry(0.035, 6, 5);
+  const inst = new THREE.InstancedMesh(bud, clay(COLOR.blush, { roughness: 0.55, sheen: 0.6 }), count);
+  const petalColors = [COLOR.blush, COLOR.apricot, COLOR.butter];
+  const dummy = new THREE.Object3D();
+  for (let i = 0; i < count; i++) {
+    dummy.position.set((i / (count - 1) - 0.5) * (width - 0.1), 0.1, (Math.random() - 0.5) * 0.05);
+    dummy.scale.setScalar(0.8 + Math.random() * 0.5);
+    dummy.updateMatrix();
+    inst.setMatrixAt(i, dummy.matrix);
+    inst.setColorAt(i, new THREE.Color(petalColors[i % petalColors.length]));
+  }
+  inst.castShadow = true;
+  g.add(inst);
+  return g;
+}
+
+export function buildIvy(count: number, spreadW: number, spreadH: number) {
+  const geo = new THREE.SphereGeometry(0.03, 5, 4);
+  const inst = new THREE.InstancedMesh(geo, clay(COLOR.apricot, { roughness: 0.7 }), count);
+  const dummy = new THREE.Object3D();
+  for (let i = 0; i < count; i++) {
+    dummy.position.set((Math.random() - 0.5) * spreadW, Math.random() * spreadH, 0.02 + Math.random() * 0.03);
+    dummy.scale.setScalar(0.6 + Math.random() * 0.8);
+    dummy.updateMatrix();
+    inst.setMatrixAt(i, dummy.matrix);
+  }
+  return inst;
+}
+
+/** A handful of drifting cloud puffs, instanced. Caller drives `.rotation.y`/position for drift. */
+export function buildCloudField(count: number, radius: number, yRange: [number, number]) {
+  const puff = new THREE.IcosahedronGeometry(1, 0);
+  const inst = new THREE.InstancedMesh(puff, clay(COLOR.cream, { roughness: 0.95, sheen: 0.05 }), count * 5);
+  const dummy = new THREE.Object3D();
+  let idx = 0;
+  const clouds: { angle: number; r: number; y: number; speed: number }[] = [];
+  for (let c = 0; c < count; c++) {
+    const angle = Math.random() * Math.PI * 2;
+    const r = radius * (0.7 + Math.random() * 0.6);
+    const y = yRange[0] + Math.random() * (yRange[1] - yRange[0]);
+    const speed = 0.02 + Math.random() * 0.03;
+    clouds.push({ angle, r, y, speed });
+    const cx = Math.cos(angle) * r;
+    const cz = Math.sin(angle) * r;
+    const puffs = 5;
+    for (let p = 0; p < puffs; p++) {
+      dummy.position.set(cx + (Math.random() - 0.5) * 1.4, y + (Math.random() - 0.5) * 0.3, cz + (Math.random() - 0.5) * 0.8);
+      dummy.scale.setScalar(0.45 + Math.random() * 0.5);
+      dummy.updateMatrix();
+      inst.setMatrixAt(idx++, dummy.matrix);
+    }
+  }
+  inst.frustumCulled = false;
+  return { mesh: inst, clouds };
+}
+
+export function buildBird() {
+  const g = new THREE.Group();
+  const body = mesh(new THREE.ConeGeometry(0.03, 0.14, 6), COLOR.ink, { roughness: 0.5 });
+  body.rotation.x = Math.PI / 2;
+  const wingGeo = new THREE.ConeGeometry(0.09, 0.02, 4);
+  const wingL = mesh(wingGeo, COLOR.ink, { roughness: 0.5 });
+  const wingR = mesh(wingGeo, COLOR.ink, { roughness: 0.5 });
+  wingL.rotation.z = Math.PI / 2;
+  wingR.rotation.z = -Math.PI / 2;
+  wingL.position.x = -0.06;
+  wingR.position.x = 0.06;
+  g.add(body, wingL, wingR);
+  g.userData.wings = [wingL, wingR];
+  return g;
+}
+
+export function buildBalloon() {
+  const g = new THREE.Group();
+  const envelope = mesh(new THREE.IcosahedronGeometry(0.55, 1), COLOR.apricot, { roughness: 0.55, sheen: 0.5 });
+  envelope.scale.set(1, 1.25, 1);
+  const basket = mesh(roundedBox(0.22, 0.16, 0.22, 0.02, 1), COLOR.terracotta, { roughness: 0.8 });
+  basket.position.y = -0.85;
+  const lineMat = new THREE.LineBasicMaterial({ color: COLOR.ink, transparent: true, opacity: 0.5 });
+  for (const x of [-0.09, 0.09]) {
+    const line = new THREE.Line(
+      new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(x * 1.4, -0.35, 0), new THREE.Vector3(x, -0.78, 0)]),
+      lineMat,
+    );
+    g.add(line);
+  }
+  g.add(envelope, basket);
+  return g;
+}
+
+export function buildWeathervane() {
+  const g = new THREE.Group();
+  const rod = mesh(new THREE.CylinderGeometry(0.012, 0.012, 0.4, 6), COLOR.inkOrange, { roughness: 0.4 });
+  rod.position.y = 0.2;
+  const arrowShape = new THREE.Shape();
+  arrowShape.moveTo(-0.14, 0);
+  arrowShape.lineTo(0.06, 0.045);
+  arrowShape.lineTo(0.06, -0.045);
+  arrowShape.closePath();
+  const arrow = mesh(new THREE.ExtrudeGeometry(arrowShape, { depth: 0.012, bevelEnabled: false }), COLOR.terracotta, { roughness: 0.5, sheen: 0.5 });
+  arrow.position.y = 0.4;
+  const ns = mesh(new THREE.ConeGeometry(0.03, 0.09, 4), COLOR.inkOrange, { roughness: 0.4 });
+  ns.position.y = 0.44;
+  g.add(rod, arrow, ns);
+  return g;
+}
+
+export function buildLantern() {
+  const g = new THREE.Group();
+  const post = mesh(new THREE.CylinderGeometry(0.02, 0.024, 0.5, 6), COLOR.inkOrange, { roughness: 0.4 });
+  post.position.y = 0.25;
+  const globe = new THREE.Mesh(
+    new THREE.SphereGeometry(0.075, 10, 8),
+    new THREE.MeshPhysicalMaterial({ color: COLOR.butter, roughness: 0.3, transmission: 0.55, thickness: 0.3, emissive: COLOR.butter, emissiveIntensity: 0.5 }),
+  );
+  globe.position.y = 0.52;
+  const light = new THREE.PointLight(COLOR.butter, 0.5, 1.4, 2);
+  light.position.y = 0.52;
+  g.add(post, globe, light);
+  return g;
+}
+
+export function buildBunting(from: THREE.Vector3, to: THREE.Vector3, count: number) {
+  const g = new THREE.Group();
+  const colors = [COLOR.blush, COLOR.apricot, COLOR.butter];
+  const flagGeo = new THREE.ConeGeometry(0.045, 0.08, 3);
+  const curveDrop = 0.18;
+  for (let i = 0; i < count; i++) {
+    const t = (i + 0.5) / count;
+    const p = from.clone().lerp(to, t);
+    p.y -= Math.sin(t * Math.PI) * curveDrop;
+    const flag = mesh(flagGeo, colors[i % colors.length], { roughness: 0.6, sheen: 0.5 });
+    flag.rotation.z = Math.PI;
+    flag.position.copy(p);
+    g.add(flag);
+  }
+  const curvePts: THREE.Vector3[] = [];
+  for (let i = 0; i <= 12; i++) {
+    const t = i / 12;
+    const p = from.clone().lerp(to, t);
+    p.y -= Math.sin(t * Math.PI) * curveDrop;
+    curvePts.push(p);
+  }
+  const line = new THREE.Line(new THREE.BufferGeometry().setFromPoints(curvePts), new THREE.LineBasicMaterial({ color: COLOR.ink, transparent: true, opacity: 0.4 }));
+  g.add(line);
+  return g;
+}
+
+export function buildPond(radius: number) {
+  const g = new THREE.Group();
+  const water = new THREE.Mesh(
+    new THREE.CircleGeometry(radius, 24),
+    new THREE.MeshPhysicalMaterial({ color: COLOR.sage, roughness: 0.25, metalness: 0, transmission: 0.2, thickness: 0.4 }),
+  );
+  water.rotation.x = -Math.PI / 2;
+  g.add(water);
+  const rim = mesh(new THREE.TorusGeometry(radius + 0.03, 0.03, 6, 20), COLOR.cream, { roughness: 0.8 });
+  rim.rotation.x = Math.PI / 2;
+  rim.position.y = 0.01;
+  g.add(rim);
+  for (let i = 0; i < 3; i++) {
+    const pad = mesh(new THREE.CircleGeometry(0.07 + Math.random() * 0.04, 8), COLOR.apricot, { roughness: 0.6 });
+    pad.rotation.x = -Math.PI / 2;
+    const a = Math.random() * Math.PI * 2;
+    const r = radius * (0.3 + Math.random() * 0.4);
+    pad.position.set(Math.cos(a) * r, 0.015, Math.sin(a) * r);
+    g.add(pad);
+  }
+  return g;
+}
+
+export function buildCrateStack() {
+  const g = new THREE.Group();
+  const sizes: [number, number, number][] = [
+    [0.22, 0.18, 0.2],
+    [0.18, 0.16, 0.17],
+  ];
+  let y = 0;
+  sizes.forEach(([w, h, d], i) => {
+    const c = mesh(roundedBox(w, h, d, 0.015, 1), i === 0 ? COLOR.apricot : COLOR.butter, { roughness: 0.85 });
+    c.position.set((Math.random() - 0.5) * 0.05, y + h / 2, (Math.random() - 0.5) * 0.05);
+    c.rotation.y = (Math.random() - 0.5) * 0.3;
+    y += h;
+    g.add(c);
+  });
+  const book = mesh(roundedBox(0.16, 0.03, 0.12, 0.008, 1), COLOR.terracotta, { roughness: 0.6 });
+  book.position.set(0.14, 0.02, 0.02);
+  book.rotation.y = 0.4;
+  g.add(book);
+  return g;
+}
+
+export function buildTelescope() {
+  const g = new THREE.Group();
+  const tripod = new THREE.Group();
+  for (const a of [0, 2.1, 4.2]) {
+    const leg = mesh(new THREE.CylinderGeometry(0.008, 0.008, 0.28, 5), COLOR.inkOrange, { roughness: 0.4 });
+    leg.position.set(Math.cos(a) * 0.07, 0.14, Math.sin(a) * 0.07);
+    leg.rotation.z = Math.cos(a) * 0.3;
+    leg.rotation.x = Math.sin(a) * 0.3;
+    tripod.add(leg);
+  }
+  const tube = mesh(new THREE.CylinderGeometry(0.03, 0.036, 0.32, 10), COLOR.terracotta, { roughness: 0.5, sheen: 0.5 });
+  tube.rotation.z = Math.PI / 3.2;
+  tube.position.set(0.04, 0.34, 0);
+  g.add(tripod, tube);
+  return g;
+}
+
+export function buildKite() {
+  const g = new THREE.Group();
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0.16);
+  shape.lineTo(0.12, 0);
+  shape.lineTo(0, -0.16);
+  shape.lineTo(-0.12, 0);
+  shape.closePath();
+  const kite = mesh(new THREE.ExtrudeGeometry(shape, { depth: 0.008, bevelEnabled: false }), COLOR.blush, { roughness: 0.6, sheen: 0.5 });
+  g.add(kite);
+  const tail = new THREE.Line(
+    new THREE.BufferGeometry().setFromPoints([
+      new THREE.Vector3(0, -0.16, 0),
+      new THREE.Vector3(-0.04, -0.3, 0),
+      new THREE.Vector3(0.04, -0.42, 0),
+    ]),
+    new THREE.LineBasicMaterial({ color: COLOR.terracotta, transparent: true, opacity: 0.7 }),
+  );
+  g.add(tail);
+  return g;
+}
+
+/** A small clay fox, sitting, watching the gate. */
+export function buildFox() {
+  const g = new THREE.Group();
+  const body = mesh(new THREE.CapsuleGeometry(0.07, 0.1, 4, 8), COLOR.apricot, { roughness: 0.65, sheen: 0.4 });
+  body.rotation.z = Math.PI / 2;
+  body.position.y = 0.09;
+  const head = mesh(new THREE.SphereGeometry(0.055, 10, 8), COLOR.apricot, { roughness: 0.65, sheen: 0.4 });
+  head.position.set(0.1, 0.16, 0);
+  const snout = mesh(new THREE.ConeGeometry(0.025, 0.06, 6), COLOR.cream, { roughness: 0.6 });
+  snout.rotation.z = -Math.PI / 2;
+  snout.position.set(0.16, 0.14, 0);
+  const earGeo = new THREE.ConeGeometry(0.02, 0.045, 4);
+  const earL = mesh(earGeo, COLOR.terracotta, { roughness: 0.6 });
+  const earR = mesh(earGeo, COLOR.terracotta, { roughness: 0.6 });
+  earL.position.set(0.09, 0.21, 0.035);
+  earR.position.set(0.09, 0.21, -0.035);
+  const tail = mesh(new THREE.ConeGeometry(0.05, 0.22, 8), COLOR.blush, { roughness: 0.6, sheen: 0.4 });
+  tail.rotation.z = Math.PI / 2.4;
+  tail.position.set(-0.13, 0.14, 0);
+  g.add(body, head, snout, earL, earR, tail);
+  return g;
+}
+
+export function buildPennant() {
+  const g = new THREE.Group();
+  const pole = mesh(new THREE.CylinderGeometry(0.02, 0.02, 1.1, 6), COLOR.inkOrange, { roughness: 0.4 });
+  pole.position.y = 0.55;
+  const flagShape = new THREE.Shape();
+  flagShape.moveTo(0, 0.18);
+  flagShape.lineTo(0.32, 0.06);
+  flagShape.lineTo(0, -0.06);
+  flagShape.closePath();
+  const flag = mesh(new THREE.ExtrudeGeometry(flagShape, { depth: 0.008, bevelEnabled: false }), COLOR.terracotta, { roughness: 0.55, sheen: 0.5 });
+  flag.position.y = 0.95;
+  g.add(pole, flag);
+  g.userData.flag = flag;
+  return g;
+}
+
+/** A confetti burst: instanced flat pastel squares. Positions/velocities live in the returned buffers. */
+export function buildConfetti(count: number, origin: THREE.Vector3) {
+  const geo = new THREE.PlaneGeometry(0.06, 0.06);
+  const colors = [COLOR.blush, COLOR.apricot, COLOR.butter, COLOR.terracotta];
+  const mat = new THREE.MeshBasicMaterial({ color: 0xffffff, side: THREE.DoubleSide, transparent: true, vertexColors: true });
+  const inst = new THREE.InstancedMesh(geo, mat, count);
+  const colorAttr = new THREE.InstancedBufferAttribute(new Float32Array(count * 3), 3);
+  const pos = new Float32Array(count * 3);
+  const vel = new Float32Array(count * 3);
+  const rot = new Float32Array(count * 3);
+  const dummy = new THREE.Object3D();
+  const c = new THREE.Color();
+  for (let i = 0; i < count; i++) {
+    pos[i * 3] = origin.x + (Math.random() - 0.5) * 0.6;
+    pos[i * 3 + 1] = origin.y + Math.random() * 0.3;
+    pos[i * 3 + 2] = origin.z + (Math.random() - 0.5) * 0.6;
+    dummy.position.set(pos[i * 3], pos[i * 3 + 1], pos[i * 3 + 2]);
+    dummy.updateMatrix();
+    inst.setMatrixAt(i, dummy.matrix);
+    c.set(colors[i % colors.length]);
+    colorAttr.setXYZ(i, c.r, c.g, c.b);
+    vel[i * 3] = (Math.random() - 0.5) * 0.6;
+    vel[i * 3 + 1] = 0.6 + Math.random() * 0.5;
+    vel[i * 3 + 2] = (Math.random() - 0.5) * 0.6;
+    rot[i * 3] = Math.random() * 4;
+    rot[i * 3 + 1] = Math.random() * 4;
+    rot[i * 3 + 2] = Math.random() * 4;
+  }
+  inst.geometry.setAttribute("color", colorAttr);
+  return { mesh: inst, pos, vel, rot, count };
+}
+
+/** A dotted golden path between waypoints, split into per-room segments so each can "light" independently. */
+export function buildPath(points: THREE.Vector3[]) {
+  const segments: THREE.Mesh[] = [];
+  const g = new THREE.Group();
+  for (let i = 0; i < points.length - 1; i++) {
+    const curve = new THREE.CatmullRomCurve3([points[i], points[i].clone().lerp(points[i + 1], 0.5).setY(0.02), points[i + 1]]);
+    const geo = new THREE.TubeGeometry(curve, 12, 0.03, 6, false);
+    const m = new THREE.Mesh(
+      geo,
+      new THREE.MeshStandardMaterial({ color: COLOR.cream, roughness: 0.6, emissive: COLOR.butter, emissiveIntensity: 0 }),
+    );
+    m.receiveShadow = true;
+    segments.push(m);
+    g.add(m);
+  }
+  return { group: g, segments };
+}

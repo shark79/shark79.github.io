@@ -1,7 +1,9 @@
 "use client";
 
 import { useState } from "react";
-import { clearLevel } from "@/lib/progress";
+import { solve } from "@/lib/progress";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 
 type Round = {
   ask: string;
@@ -57,9 +59,7 @@ function Flawed({ text, flaw }: { text: string; flaw: string }) {
   return (
     <>
       {text.slice(0, at)}
-      <span className="rounded bg-destructive/15 px-1 font-medium text-destructive">
-        {flaw}
-      </span>
+      <span className="rounded bg-destructive/15 px-1 font-medium text-destructive">{flaw}</span>
       {text.slice(at + flaw.length)}
     </>
   );
@@ -89,15 +89,15 @@ export function HallucinationGame() {
     setPicked(null);
     const at = round + 1;
     setRound(at);
-    if (at >= ROUNDS.length) clearLevel("accuracy");
+    if (at >= ROUNDS.length) solve("accuracy");
   };
 
   if (finished) {
     return (
-      <div className="race-pop rounded-xl border border-border p-4 sm:p-5">
-        <div className="mb-2 font-mono text-[10px] uppercase tracking-widest text-primary">
-          Spot the hallucination · complete
-        </div>
+      <div className="clay-sm race-pop rounded-[var(--radius-md)] bg-card p-4 sm:p-5">
+        <p className="mb-2 font-mono text-[11px] uppercase tracking-[0.16em] text-primary">
+          Second opinion · complete
+        </p>
         <p className="font-heading text-2xl font-semibold tracking-tight">
           {score} of {ROUNDS.length}
         </p>
@@ -105,63 +105,58 @@ export function HallucinationGame() {
           {score === ROUNDS.length
             ? "All three. Note how little the wrong answers looked wrong — that is the whole problem."
             : "Worth noticing how little the wrong answers looked wrong. Confidence reads the same either way."}{" "}
-          In a clinical product this is not a quiz and not a cosmetic bug: an
-          invented symptom, a stale date, or a short medication list is a
-          patient-safety problem the moment a clinician believes it. Finding and
-          fixing that category of failure is a real part of my day job.
+          In a clinical product this is not a quiz and not a cosmetic bug: an invented symptom, a
+          stale date, or a short medication list is a patient-safety problem the moment a
+          clinician believes it. Finding and fixing that category of failure is a real part of my
+          day job.
         </p>
-        <button
-          type="button"
+        <Button
+          variant="soft"
+          className="mt-4"
           onClick={() => {
             setRound(0);
             setScore(0);
             setPicked(null);
           }}
-          className="mt-4 min-h-9 rounded-full border border-border px-4 font-mono text-[10px] uppercase tracking-widest text-muted-foreground transition-colors hover:border-primary hover:text-primary"
         >
           Play again ↻
-        </button>
+        </Button>
       </div>
     );
   }
 
   return (
-    <div className="rounded-xl border border-border p-4 sm:p-5">
+    <div className="clay-sm rounded-[var(--radius-md)] bg-card p-4 sm:p-5">
       <div className="mb-3 flex items-center justify-between gap-3">
-        <div className="font-mono text-[10px] uppercase tracking-widest text-primary">
-          Spot the hallucination
-        </div>
+        <p className="font-mono text-[11px] uppercase tracking-[0.16em] text-primary">
+          Second opinion
+        </p>
         <div className="flex items-center gap-1.5" aria-hidden="true">
           {ROUNDS.map((_, i) => (
             <span
               key={i}
-              className={`size-1.5 rounded-full transition-colors ${
-                i < round
-                  ? "bg-primary"
-                  : i === round
-                    ? "bg-foreground"
-                    : "bg-border"
-              }`}
+              className={cn(
+                "size-1.5 rounded-full transition-colors",
+                i < round ? "bg-primary" : i === round ? "bg-foreground" : "bg-border",
+              )}
             />
           ))}
         </div>
       </div>
 
       <p className="text-sm leading-relaxed text-foreground">
-        Both answers sound right. One of them does not survive the note. Pick
-        the one you would not sign off on.
+        Both answers sound right. One of them does not survive the note. Pick the one you would
+        not sign off on.
       </p>
 
-      <div className="mt-4 rounded-lg border border-dashed border-border p-3">
-        <div className="mb-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+      <div className="clay-inset mt-4 p-3">
+        <p className="mb-1.5 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
           The note (synthetic)
-        </div>
-        <p className="text-sm leading-relaxed text-muted-foreground">
-          {current!.note}
         </p>
+        <p className="text-sm leading-relaxed text-muted-foreground">{current!.note}</p>
       </div>
 
-      <p className="mt-4 font-mono text-[11px] uppercase tracking-wide text-muted-foreground">
+      <p className="mt-4 font-mono text-[11px] tracking-wide text-muted-foreground uppercase">
         Asked: {current!.ask}
       </p>
 
@@ -169,31 +164,26 @@ export function HallucinationGame() {
         {current!.answers.map((answer, i) => {
           const settled = picked !== null;
           const isBad = i === current!.bad;
-          const state = !settled
-            ? "border-border hover:border-primary"
-            : isBad
-              ? "border-destructive/60 bg-destructive/5"
-              : "border-primary/60 bg-primary/5";
           return (
             <button
               key={i}
               type="button"
               disabled={settled}
               onClick={() => pick(i)}
-              className={`rounded-lg border px-3.5 py-3 text-left text-sm leading-relaxed transition-colors ${state} ${
-                wrongShake === i ? "race-shake" : ""
-              }`}
+              className={cn(
+                "clay-sm min-h-11 rounded-[var(--radius-md)] px-3.5 py-3 text-left text-sm leading-relaxed transition-colors duration-[var(--dur-hover)]",
+                !settled && "clay-interactive text-foreground hover:text-primary",
+                settled && isBad && "clay-wrong text-foreground",
+                settled && !isBad && "clay-butter text-foreground",
+                wrongShake === i && "race-shake",
+              )}
             >
               <span className="mb-1 block font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                 Answer {i === 0 ? "A" : "B"}
                 {settled && isBad ? " · does not hold up" : ""}
                 {settled && !isBad ? " · faithful to the note" : ""}
               </span>
-              {settled && isBad ? (
-                <Flawed text={answer} flaw={current!.flaw} />
-              ) : (
-                answer
-              )}
+              {settled && isBad ? <Flawed text={answer} flaw={current!.flaw} /> : answer}
             </button>
           );
         })}
@@ -202,20 +192,14 @@ export function HallucinationGame() {
       {picked !== null && (
         <div className="race-pop mt-4">
           <p className="text-sm leading-relaxed text-muted-foreground">
-            <span
-              className={`font-medium ${picked === current!.bad ? "text-primary" : "text-foreground"}`}
-            >
+            <span className={cn("font-medium", picked === current!.bad ? "text-primary" : "text-foreground")}>
               {picked === current!.bad ? "Caught it. " : "Missed it. "}
             </span>
             {current!.why}
           </p>
-          <button
-            type="button"
-            onClick={next}
-            className="mt-3 min-h-9 rounded-full border border-primary px-4 font-mono text-[10px] uppercase tracking-widest text-primary transition-colors hover:bg-primary/10"
-          >
+          <Button variant="soft" size="default" className="mt-3 h-9 px-4 text-xs" onClick={next}>
             {round === ROUNDS.length - 1 ? "See the score" : "Next round"} →
-          </button>
+          </Button>
         </div>
       )}
     </div>

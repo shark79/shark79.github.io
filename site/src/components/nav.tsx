@@ -2,145 +2,103 @@
 
 import * as React from "react";
 import { Menu, X } from "lucide-react";
-import { ThemeToggle } from "@/components/theme-toggle";
-import { TOTAL_LEVELS, useProgress } from "@/lib/progress";
-import { resetMode, useMode } from "@/lib/mode";
-
-const RING = 2 * Math.PI * 10;
-
-function LevelRing() {
-  const { cleared } = useProgress();
-  const mode = useMode();
-  const done = cleared.length;
-
-  // In read mode there is no run to track, so the ring stays out of the way.
-  if (mode !== "play") {
-    return (
-      <button
-        type="button"
-        onClick={resetMode}
-        title="Switch to the playable version"
-        className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground transition-colors hover:text-primary"
-      >
-        Play it
-      </button>
-    );
-  }
-
-  return (
-    <a
-      href="#work"
-      title={`${done} of ${TOTAL_LEVELS} levels cleared`}
-      className="flex items-center gap-1.5 text-muted-foreground transition-colors hover:text-foreground"
-    >
-      <svg viewBox="0 0 24 24" className="size-6 -rotate-90" aria-hidden="true">
-        <circle
-          cx="12"
-          cy="12"
-          r="10"
-          fill="none"
-          strokeWidth="2"
-          className="stroke-border"
-        />
-        <circle
-          cx="12"
-          cy="12"
-          r="10"
-          fill="none"
-          strokeWidth="2"
-          strokeLinecap="round"
-          strokeDasharray={RING}
-          strokeDashoffset={RING * (1 - done / TOTAL_LEVELS)}
-          className="stroke-primary transition-[stroke-dashoffset] duration-700 ease-out"
-        />
-      </svg>
-      <span className="font-mono text-[10px] tabular-nums">
-        {done}/{TOTAL_LEVELS}
-      </span>
-      <span className="sr-only">levels cleared, jump to the work section</span>
-    </a>
-  );
-}
-
-const LINKS = [
-  { href: "#about", label: "About" },
-  { href: "#work", label: "Work" },
-  { href: "#experience", label: "Experience" },
-  { href: "#gallery", label: "Gallery" },
-];
+import { ROOMS } from "@/lib/content";
+import { TOTAL_ROOMS, useProgress } from "@/lib/progress";
+import { CastleMini } from "@/components/ui/castle-mini";
 
 export function Nav() {
   const [open, setOpen] = React.useState(false);
+  const { rooms, keys } = useProgress();
 
   return (
-    <header className="fixed inset-x-0 top-0 z-50 bg-background/70 backdrop-blur-md transition-colors">
-      <nav className="grid w-full grid-cols-[1fr_auto_1fr] items-center px-6 py-4 sm:px-10 lg:px-14">
+    <header className="fixed inset-x-0 top-3 z-50 flex justify-center px-3">
+      <div className="clay-sm relative flex w-full max-w-4xl items-center gap-3 rounded-full bg-card/95 px-3 py-2 sm:px-4">
         <a
           href="#top"
-          className="font-heading text-sm font-semibold tracking-tight"
           onClick={() => setOpen(false)}
+          className="shrink-0 rounded-full px-1 font-heading text-base font-semibold tracking-tight"
         >
-          sj<span className="text-primary">.</span>
+          Shashank
         </a>
-        <ul className="col-start-2 hidden items-center justify-center gap-8 sm:flex">
-          {LINKS.map((l) => (
-            <li key={l.href}>
+
+        <ul className="hidden flex-1 items-center justify-center gap-6 lg:flex">
+          {ROOMS.map((r) => (
+            <li key={r.id}>
               <a
-                href={l.href}
-                className="text-xs font-medium uppercase tracking-widest text-muted-foreground transition-colors hover:text-foreground"
+                href={`#${r.id}`}
+                className="text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
               >
-                {l.label}
+                {r.label}
               </a>
             </li>
           ))}
         </ul>
-        <div className="col-start-3 flex items-center justify-end gap-4">
-          <LevelRing />
-          <ThemeToggle />
+
+        <div className="ml-auto flex items-center gap-3 lg:ml-0">
+          <a
+            href="#top"
+            title={`${rooms.length} of ${TOTAL_ROOMS} rooms lit`}
+            className="hidden items-center gap-1.5 sm:flex"
+          >
+            <CastleMini visited={rooms} />
+            <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
+              {rooms.length}/{TOTAL_ROOMS}
+            </span>
+            {keys.length > 0 && (
+              <span
+                className="font-mono text-[11px] tabular-nums"
+                style={{ color: "var(--ink-orange)" }}
+              >
+                · {keys.length} key{keys.length === 1 ? "" : "s"}
+              </span>
+            )}
+          </a>
+
           <a
             href="#contact"
-            className="hidden rounded-full border border-border px-4 py-1.5 text-xs font-medium uppercase tracking-widest transition-colors hover:border-primary hover:text-primary sm:inline-block"
+            className="clay-sm clay-interactive hidden h-9 items-center rounded-full bg-primary px-4 text-xs font-medium text-primary-foreground sm:inline-flex"
           >
-            Let&apos;s talk
+            Say hi
           </a>
+
           <button
             type="button"
             aria-label={open ? "Close menu" : "Open menu"}
             aria-expanded={open}
             onClick={() => setOpen((v) => !v)}
-            className="inline-flex size-9 items-center justify-center rounded-full text-foreground sm:hidden"
+            className="flex size-11 items-center justify-center rounded-full text-foreground lg:hidden"
           >
             {open ? <X className="size-5" /> : <Menu className="size-5" />}
           </button>
         </div>
-      </nav>
 
-      {open && (
-        <div className="border-t border-border bg-background px-6 py-6 sm:hidden">
-          <ul className="flex flex-col gap-5">
-            {LINKS.map((l) => (
-              <li key={l.href}>
+        {open && (
+          <div className="clay absolute inset-x-0 top-[calc(100%+8px)] rounded-[var(--radius-lg)] bg-card p-4 lg:hidden">
+            <div className="grid grid-cols-2 gap-2">
+              {ROOMS.map((r) => (
                 <a
-                  href={l.href}
+                  key={r.id}
+                  href={`#${r.id}`}
                   onClick={() => setOpen(false)}
-                  className="text-base font-medium uppercase tracking-widest text-foreground"
+                  className="clay-sm clay-interactive flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-card px-3.5 py-3"
                 >
-                  {l.label}
+                  <span className="font-mono text-[10px] tracking-widest text-primary uppercase">
+                    {r.n}
+                  </span>
+                  <span className="font-heading text-sm font-semibold">{r.label}</span>
                 </a>
-              </li>
-            ))}
-            <li>
-              <a
-                href="#contact"
-                onClick={() => setOpen(false)}
-                className="text-base font-medium uppercase tracking-widest text-primary"
-              >
-                Let&apos;s talk
-              </a>
-            </li>
-          </ul>
-        </div>
-      )}
+              ))}
+            </div>
+            <a
+              href="#contact"
+              onClick={() => setOpen(false)}
+              className="clay-sm clay-interactive mt-2 flex min-h-11 items-center justify-center rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground"
+            >
+              Say hi
+            </a>
+          </div>
+        )}
+      </div>
     </header>
   );
 }

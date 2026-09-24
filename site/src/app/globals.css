@@ -2,7 +2,7 @@
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
 
-@custom-variant dark (&:is(.dark *));
+/* Castle in the Clouds — light-only, claymorphic. No dark mode, no toggle. */
 
 @theme inline {
   --color-background: var(--background);
@@ -10,149 +10,257 @@
   --font-sans: var(--font-sans);
   --font-mono: var(--font-geist-mono);
   --font-heading: var(--font-display);
-  --color-sidebar-ring: var(--sidebar-ring);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar: var(--sidebar);
-  --color-chart-5: var(--chart-5);
-  --color-chart-4: var(--chart-4);
-  --color-chart-3: var(--chart-3);
-  --color-chart-2: var(--chart-2);
-  --color-chart-1: var(--chart-1);
-  --color-ring: var(--ring);
-  --color-input: var(--input);
-  --color-border: var(--border);
-  --color-destructive: var(--destructive);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-accent: var(--accent);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-muted: var(--muted);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-secondary: var(--secondary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary: var(--primary);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-popover: var(--popover);
-  --color-card-foreground: var(--card-foreground);
+
   --color-card: var(--card);
-  --radius-sm: calc(var(--radius) * 0.6);
-  --radius-md: calc(var(--radius) * 0.8);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) * 1.4);
-  --radius-2xl: calc(var(--radius) * 1.8);
-  --radius-3xl: calc(var(--radius) * 2.2);
-  --radius-4xl: calc(var(--radius) * 2.6);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-soft: var(--primary-soft);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  /* pastel clay fills */
+  --color-blush: var(--blush);
+  --color-apricot: var(--apricot);
+  --color-butter: var(--butter);
+  --color-cream: var(--cream);
+  --color-ink-orange: var(--ink-orange);
+
+  /* exact radii from the design spec, not a derived scale */
+  --radius-sm: 12px;
+  --radius-md: 20px;
+  --radius-lg: 28px;
+  --radius-xl: 34px;
 }
 
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.58 0.21 276);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.94 0.03 276);
-  --accent-foreground: oklch(0.32 0.15 276);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.58 0.21 276);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
-  --sidebar: oklch(0.985 0 0);
-  --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
-  --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
-}
+  --background: #fbf7f1;
+  --foreground: #1b1714;
+  --card: #fffcf7;
+  --card-foreground: #1b1714;
+  --popover: #fffcf7;
+  --popover-foreground: #1b1714;
 
-.dark {
-  --background: oklch(0.145 0 0);
-  --foreground: oklch(0.985 0 0);
-  --card: oklch(0.205 0 0);
-  --card-foreground: oklch(0.985 0 0);
-  --popover: oklch(0.205 0 0);
-  --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.72 0.18 276);
-  --primary-foreground: oklch(0.145 0 0);
-  --secondary: oklch(0.269 0 0);
-  --secondary-foreground: oklch(0.985 0 0);
-  --muted: oklch(0.269 0 0);
-  --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0.04 276);
-  --accent-foreground: oklch(0.88 0.09 276);
-  --destructive: oklch(0.704 0.191 22.216);
-  --border: oklch(1 0 0 / 10%);
-  --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.72 0.18 276);
-  --chart-1: oklch(0.87 0 0);
-  --chart-2: oklch(0.556 0 0);
-  --chart-3: oklch(0.439 0 0);
-  --chart-4: oklch(0.371 0 0);
-  --chart-5: oklch(0.269 0 0);
-  --sidebar: oklch(0.205 0 0);
-  --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
-  --sidebar-accent: oklch(0.269 0 0);
-  --sidebar-accent-foreground: oklch(0.985 0 0);
-  --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --primary: #c4523f;
+  --primary-foreground: #fffdfb;
+  --primary-soft: #f3d2c8;
+
+  --secondary: #fff3df;
+  --secondary-foreground: #1b1714;
+  --muted: #f2ebdf;
+  --muted-foreground: #5f574f;
+  --accent: #f3d2c8;
+  --accent-foreground: #1b1714;
+  --destructive: #b23a2e;
+
+  --border: #ede3d6;
+  --input: #ede3d6;
+  --ring: #c4523f;
+
+  --blush: #f6b8ae;
+  --apricot: #f9cba0;
+  --butter: #fbe6a6;
+  --cream: #fff3df;
+  --ink-orange: #a8561a;
+
+  /* motion */
+  --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --dur-press: 160ms;
+  --dur-hover: 320ms;
+  --dur-reveal: 700ms;
 }
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-border;
   }
   body {
     @apply bg-background text-foreground;
   }
   html {
     @apply font-sans;
+    color-scheme: light;
+  }
+  :focus-visible {
+    outline: 2px solid var(--primary);
+    outline-offset: 3px;
+    border-radius: var(--radius-sm);
   }
 }
 
-@keyframes showreel {
-  from { transform: translateX(0); }
-  to { transform: translateX(-50%); }
+/* ---------------------------------------------------------------- clay --- */
+/* Soft, inflated, tactile surfaces. Outer shadow gives lift off the page;
+   inset highlight/shade gives the "clay" roundness. */
+
+.clay {
+  background: var(--card);
+  border-radius: var(--radius-lg);
+  box-shadow:
+    0 18px 40px -12px rgba(170, 110, 80, 0.28),
+    0 4px 10px -4px rgba(170, 110, 80, 0.18),
+    inset 0 2px 0 rgba(255, 255, 255, 0.9),
+    inset 6px 8px 16px rgba(255, 255, 255, 0.65),
+    inset -8px -10px 18px rgba(196, 130, 95, 0.14);
 }
-@keyframes showreel-reverse {
-  from { transform: translateX(-50%); }
-  to { transform: translateX(0); }
+
+.clay-sm {
+  background: var(--card);
+  border-radius: var(--radius-md);
+  box-shadow:
+    0 10px 22px -10px rgba(170, 110, 80, 0.26),
+    0 2px 6px -2px rgba(170, 110, 80, 0.16),
+    inset 0 1.5px 0 rgba(255, 255, 255, 0.9),
+    inset 4px 5px 10px rgba(255, 255, 255, 0.6),
+    inset -5px -6px 12px rgba(196, 130, 95, 0.12);
 }
-.animate-showreel {
-  animation: showreel 34s linear infinite;
+
+.clay-inset {
+  background: var(--muted);
+  border-radius: var(--radius-md);
+  box-shadow:
+    inset 0 3px 8px rgba(150, 100, 75, 0.16),
+    inset 0 -1px 0 rgba(255, 255, 255, 0.7);
 }
-.animate-showreel-reverse {
-  animation: showreel-reverse 40s linear infinite;
+
+.clay-pressed {
+  box-shadow:
+    inset 0 3px 8px rgba(150, 100, 75, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transform: translateY(1px) scale(0.985);
 }
-.animate-showreel:hover,
-.animate-showreel-reverse:hover {
-  animation-play-state: paused;
+
+/* Interactive clay: press + lift, on buttons/cards/chips/tiles the visitor
+   can actually act on. Kept separate from plain .clay so static cards don't
+   fake a hover affordance they don't have. */
+.clay-interactive {
+  transition:
+    transform var(--dur-hover) var(--ease-out),
+    box-shadow var(--dur-hover) var(--ease-out);
 }
+.clay-interactive:hover {
+  transform: translateY(-3px);
+}
+.clay-interactive:active {
+  transition-duration: var(--dur-press);
+  box-shadow:
+    inset 0 3px 8px rgba(150, 100, 75, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  transform: translateY(1px) scale(0.985);
+}
+
+/* Pastel clay fills: a soft top-left -> bottom-right gradient of the pastel,
+   text stays --foreground per the "pastels are fills, never text" rule. */
+.clay-blush {
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklch, var(--blush), white 4%),
+    color-mix(in oklch, var(--blush), black 4%)
+  );
+}
+.clay-apricot {
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklch, var(--apricot), white 4%),
+    color-mix(in oklch, var(--apricot), black 4%)
+  );
+}
+.clay-butter {
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklch, var(--butter), white 4%),
+    color-mix(in oklch, var(--butter), black 4%)
+  );
+}
+.clay-cream {
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklch, var(--cream), white 4%),
+    color-mix(in oklch, var(--cream), black 4%)
+  );
+}
+/* A gentle "that's not it" tint for a wrong quiz pick — never full destructive
+   red, this is a riddle, not a form error. */
+.clay-wrong {
+  background: color-mix(in oklch, var(--destructive) 10%, var(--card));
+}
+
+/* ------------------------------------------------------------- surface --- */
+/* Faint paper grain over the whole shot — world and UI both read as one
+   crafted, tactile diorama. Z-index scale for the page: canvas 0, grain 10,
+   room content 20, floating chrome (nav/room index/toasts) 50. */
+
+.paper-grain {
+  position: fixed;
+  inset: 0;
+  z-index: 10;
+  pointer-events: none;
+  opacity: 0.03;
+  mix-blend-mode: multiply;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+}
+
+/* A small clay tack, pinning a room plaque to the world like paper to cork. */
+.clay-pin {
+  width: 13px;
+  height: 13px;
+  border-radius: 999px;
+  background:
+    radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.85), transparent 60%),
+    var(--primary);
+  box-shadow:
+    0 3px 6px rgba(150, 70, 50, 0.35),
+    inset 0 1px 1px rgba(255, 255, 255, 0.5);
+}
+
+/* --------------------------------------------------------- reveal-on-scroll */
+/* One rise + fade per section as it enters, staggered per child via
+   --reveal-i. Reduced motion turns this into an instant opacity swap. */
+
+.reveal {
+  opacity: 0;
+  transform: translateY(16px);
+  transition:
+    opacity var(--dur-reveal) var(--ease-out),
+    transform var(--dur-reveal) var(--ease-out);
+  transition-delay: calc(var(--reveal-i, 0) * 60ms);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
 @media (prefers-reduced-motion: reduce) {
-  .animate-showreel,
-  .animate-showreel-reverse {
-    animation: none;
+  .reveal {
+    transition: opacity 200ms linear;
+    transform: none;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+  .clay-interactive:hover,
+  .clay-interactive:active {
+    transform: none;
   }
 }
+
+/* ------------------------------------------------------------ utilities --- */
 
 .scrollbar-none {
   scrollbar-width: none;
@@ -162,57 +270,23 @@
   display: none;
 }
 
-/* Solid content panel: sits over the fixed dotted-surface background so
-   text never has to compete with the dots for contrast. Fully opaque on
-   request, no dots showing through. */
-.glass-panel {
-  position: relative;
-  border-radius: var(--radius-2xl);
-  background: var(--background);
-  border: 1px solid var(--border);
-  box-shadow: 0 1px 2px color-mix(in oklch, var(--foreground) 4%, transparent);
-}
-
-/* Gallery photos: grayscale-until-hover only makes sense on devices that
-   actually support hover. On touch, show full color right away instead
-   of leaving the photo stuck in grayscale with no way to "hover" it. */
+/* Gallery photos: grayscale until hover on devices that support it; full
+   colour immediately on touch, where there is no "hover" to reward. */
 @media (hover: hover) and (pointer: fine) {
   .gallery-img {
-    filter: grayscale(1);
+    filter: grayscale(1) sepia(0.15);
     transition:
-      filter 0.5s,
-      transform 0.5s;
+      filter var(--dur-hover) var(--ease-out),
+      transform var(--dur-hover) var(--ease-out);
   }
-  .gallery-img:hover {
-    filter: grayscale(0);
+  .gallery-img:hover,
+  .gallery-img:focus-visible {
+    filter: grayscale(0) sepia(0);
   }
 }
 
-/* Magic-UI style highlight flash when a project is scrolled to from the
-   featured card stack. */
-@keyframes project-highlight-flash {
-  0% {
-    box-shadow: 0 0 0 0 color-mix(in oklch, var(--primary) 55%, transparent);
-    background: color-mix(in oklch, var(--primary) 8%, transparent);
-  }
-  70% {
-    box-shadow: 0 0 0 14px color-mix(in oklch, var(--primary) 0%, transparent);
-    background: color-mix(in oklch, var(--primary) 8%, transparent);
-  }
-  100% {
-    box-shadow: 0 0 0 0 color-mix(in oklch, var(--primary) 0%, transparent);
-    background: transparent;
-  }
-}
-.project-highlight {
-  animation: project-highlight-flash 1.6s ease-out;
-  border-radius: var(--radius-lg);
-}
+/* ---- mini-games (seat race, spot the hallucination) ---- */
 
-/* ---- Level games (seat race, spot the hallucination) ---- */
-
-/* A request travelling from the client to the seat. Stops short of the seat
-   panel (w-20 = 5rem) so the dot lands against it rather than under it. */
 @keyframes race-packet {
   from {
     left: 0.5rem;
@@ -277,49 +351,40 @@
   }
 }
 
-/* Gallery prev/next arrows: glass buttons with a soft accent glow on
-   hover, floating over the photo track. */
-.gallery-arrow {
-  position: absolute;
-  top: 50%;
-  transform: translateY(-50%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 2.75rem;
-  height: 2.75rem;
-  border-radius: 9999px;
-  background: color-mix(in oklch, var(--background) 85%, transparent);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-  border: 1px solid var(--border);
-  color: var(--foreground);
-  box-shadow: 0 4px 16px color-mix(in oklch, var(--foreground) 10%, transparent);
-  transition:
-    box-shadow 0.25s,
-    border-color 0.25s,
-    transform 0.25s,
-    opacity 0.25s;
-  cursor: pointer;
-  z-index: 10;
+/* ---- painting lightbox ---- */
+
+@keyframes lightbox-in {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
-.gallery-arrow:hover:not(:disabled) {
-  border-color: var(--primary);
-  box-shadow:
-    0 0 0 4px color-mix(in oklch, var(--primary) 18%, transparent),
-    0 6px 20px color-mix(in oklch, var(--primary) 25%, transparent);
-  transform: translateY(-50%) scale(1.08);
+.lightbox-in {
+  animation: lightbox-in 380ms var(--ease-out) both;
 }
-.gallery-arrow:active:not(:disabled) {
-  transform: translateY(-50%) scale(0.96);
+
+/* ---- toasts ---- */
+
+@keyframes toast-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, 10px) scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
 }
-.gallery-arrow:disabled {
-  opacity: 0;
-  pointer-events: none;
+.toast-in {
+  animation: toast-in 0.4s var(--ease-spring) both;
 }
-@media (max-width: 640px) {
-  .gallery-arrow {
-    width: 2.25rem;
-    height: 2.25rem;
+
+@media (prefers-reduced-motion: reduce) {
+  .toast-in {
+    animation: none;
   }
 }

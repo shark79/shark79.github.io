@@ -1,6 +1,5 @@
-import type { Metadata } from "next";
-import { Geist, Geist_Mono, Space_Grotesk } from "next/font/google";
-import { ThemeProvider } from "@/components/theme-provider";
+import type { Metadata, Viewport } from "next";
+import { Fraunces, Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,16 +12,28 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const spaceGrotesk = Space_Grotesk({
+const fraunces = Fraunces({
   variable: "--font-display",
   subsets: ["latin"],
-  weight: ["500", "600", "700"],
+  axes: ["SOFT", "WONK", "opsz"],
 });
 
 export const metadata: Metadata = {
-  title: "Shashank Jamkhandi · AI Engineer / GenAI Developer",
+  title: "Shashank Jamkhandi · AI Engineer",
   description:
-    "AI Engineer / GenAI Developer shipping production RAG pipelines, LLM-orchestrated agents, and vector-search retrieval in healthcare AI.",
+    "AI Engineer building agentic systems and clinical AI that knows when to stop and ask a human. A claymorphic castle you can explore, room by room.",
+  openGraph: {
+    title: "Shashank Jamkhandi · AI Engineer",
+    description:
+      "AI Engineer building agentic systems and clinical AI that knows when to stop and ask a human.",
+    type: "website",
+  },
+};
+
+export const viewport: Viewport = {
+  themeColor: "#FBF7F1",
+  width: "device-width",
+  initialScale: 1,
 };
 
 export default function RootLayout({
@@ -33,18 +44,11 @@ export default function RootLayout({
   return (
     <html
       lang="en"
-      suppressHydrationWarning
-      className={`${geistSans.variable} ${geistMono.variable} ${spaceGrotesk.variable} h-full antialiased`}
+      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        <ThemeProvider
-          attribute="class"
-          defaultTheme="dark"
-          enableSystem={false}
-          disableTransitionOnChange
-        >
-          {children}
-        </ThemeProvider>
+        <div className="paper-grain" aria-hidden="true" />
+        {children}
       </body>
     </html>
   );
