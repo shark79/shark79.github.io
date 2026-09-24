@@ -37,7 +37,7 @@ export function RoomShell({
         className={cn(
           // The section itself lets pointers through to the castle's painting and
           // opening hit layers underneath; only the content column catches them.
-          "pointer-events-auto mx-auto w-full max-w-2xl px-5 sm:px-8 lg:mx-0 lg:max-w-[46%]",
+          "pointer-events-auto relative mx-auto w-full max-w-2xl px-5 sm:px-8 lg:mx-0 lg:max-w-[46%]",
           // Cards sit opposite the opening. On the left, lg:ml-56 clears the
           // fixed bottom-left room index so it never overlaps this column.
           room.side === "left" ? "lg:ml-auto lg:mr-16" : "lg:ml-56",
