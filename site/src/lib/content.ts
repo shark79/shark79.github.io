@@ -31,6 +31,8 @@ export const PROFILE = {
 export const ROOMS = [
   {
     id: "about",
+    // Desktop screen side the 3D camera frames this opening on; cards go opposite.
+    side: "left",
     n: "01",
     place: "The Study",
     label: "About me",
@@ -39,6 +41,7 @@ export const ROOMS = [
   },
   {
     id: "work",
+    side: "right",
     n: "02",
     place: "The Workshop",
     label: "Projects",
@@ -47,6 +50,7 @@ export const ROOMS = [
   },
   {
     id: "experience",
+    side: "left",
     n: "03",
     place: "The Hall",
     label: "Experience",
@@ -55,6 +59,7 @@ export const ROOMS = [
   },
   {
     id: "skills",
+    side: "right",
     n: "04",
     place: "The Tool Room",
     label: "Skills",
@@ -63,6 +68,7 @@ export const ROOMS = [
   },
   {
     id: "gallery",
+    side: "left",
     n: "05",
     place: "The Gallery",
     label: "Off the clock",
@@ -71,6 +77,7 @@ export const ROOMS = [
   },
   {
     id: "contact",
+    side: "right",
     n: "06",
     place: "The Post Tower",
     label: "Contact",

@@ -11,7 +11,7 @@ const TILES = ["clay-blush", "clay-apricot", "clay-butter", "clay-cream"] as con
 export function About() {
   return (
     <RoomShell room={room}>
-      <div className="max-w-[62ch] space-y-4 text-[15px] leading-relaxed text-muted-foreground sm:text-base">
+      <div className="clay space-y-4 rounded-[var(--radius-xl)] bg-card p-6 text-[15px] leading-relaxed text-muted-foreground sm:p-8 sm:text-base">
         {ABOUT.map((p, i) => (
           <p key={i}>{p}</p>
         ))}

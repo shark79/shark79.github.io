@@ -28,7 +28,9 @@ export function ToastStack() {
         : `Key found · ${KEYS.find((k) => k.id === last.id)?.label ?? last.id} · ${keys.length} of ${TOTAL_KEYS}`;
 
     const id = ++toastSeq;
-    setToasts((t) => [...t, { id, text }]);
+    // Keep at most two on screen: a fast scroll past several rooms shouldn't
+    // bury the page in a column of pills.
+    setToasts((t) => [...t.slice(-1), { id, text }]);
     window.setTimeout(() => setToasts((t) => t.filter((x) => x.id !== id)), TOAST_MS);
 
     if (last.kind === "room" && rooms.length === TOTAL_ROOMS && !celebrated.current) {
