@@ -63,7 +63,13 @@ export class CastleScene {
     this.renderer.toneMappingExposure = 1.2;
 
     this.scene.fog = new THREE.Fog(P.COLOR.bg, 11, 27);
-    this.camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.1, 60);
+    // near/far kept as tight as the scene allows: a 0.1..60 range (600:1) left
+    // almost no depth-buffer precision at ~10 units out, so the small framed
+    // paintings failed their depth test against nearby geometry and vanished
+    // — invisible, not just dim. Nothing in the scene sits closer than ~1.2
+    // units from any keyframe (the gallery hall pan) or farther than ~30
+    // (mobile contact pull-back to the farthest background cloud).
+    this.camera = new THREE.PerspectiveCamera(42, window.innerWidth / window.innerHeight, 0.3, 34);
 
     this.assembly = buildCastle();
     this.scene.add(this.assembly.world);
@@ -86,7 +92,7 @@ export class CastleScene {
     key.shadow.camera.bottom = -7;
     key.shadow.bias = -0.0025;
     key.shadow.normalBias = 0.02;
-    const fill = new THREE.DirectionalLight(P.COLOR.cream, 0.7);
+    const fill = new THREE.DirectionalLight(P.COLOR.cream, 1.0);
     fill.position.set(6, 4, 8);
     this.scene.add(hemi, key, fill);
 
@@ -231,9 +237,11 @@ export class CastleScene {
         leaf.pivot.rotation[leaf.axis] = leaf.openSign * leaf.maxOpen * st.open;
       });
       const litTarget = this.visited.has(room.id) ? 1 : scrollAmt > 0.4 ? 0.55 : 0;
-      rig.light.intensity = THREE.MathUtils.lerp(rig.light.intensity, litTarget * 1.7, damp);
+      rig.light.intensity = THREE.MathUtils.lerp(rig.light.intensity, litTarget * 1.1, damp);
+      // Additive blending accumulates fast — a much lower ceiling than a normal-blend
+      // plane needs to read as a soft glow instead of a blown-out white rectangle.
       const glowMat = rig.glow.material as THREE.MeshBasicMaterial;
-      glowMat.opacity = THREE.MathUtils.lerp(glowMat.opacity, litTarget * 0.8, damp);
+      glowMat.opacity = THREE.MathUtils.lerp(glowMat.opacity, litTarget * 0.09, damp);
 
       if ((scrollAmt > 0.1 || this.visited.has(room.id)) && !this.loadedRooms.has(room.id)) {
         this.loadedRooms.add(room.id);
@@ -253,8 +261,11 @@ export class CastleScene {
       interior.paintings.forEach((pm) => {
         const hovered = this.hoveredPainting === pm.file;
         pm.group.rotation.y = THREE.MathUtils.lerp(pm.group.rotation.y, hovered ? 0.05 : 0, damp);
-        const mat = pm.picture.material as THREE.MeshStandardMaterial;
-        mat.emissiveIntensity = THREE.MathUtils.lerp(mat.emissiveIntensity, hovered ? 0.35 : 0.08, damp);
+        // Picture material is unlit (MeshBasicMaterial) so it always reads
+        // clearly regardless of nearby lights — "picture light brightens" is
+        // faked by lerping its color toward white instead of an emissive term.
+        const mat = pm.picture.material as THREE.MeshBasicMaterial;
+        mat.color.lerp(new THREE.Color(hovered ? 0xffffff : 0xfff2df), damp);
       });
     });
 

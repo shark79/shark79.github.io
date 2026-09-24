@@ -92,7 +92,7 @@ export function CastleHub() {
         />
       )}
 
-      <section id="top" className="relative min-h-svh px-6 pt-28 pb-44 sm:px-10 sm:pt-36">
+      <section id="top" className="relative min-h-svh overflow-x-hidden px-6 pt-28 pb-44 sm:px-10 sm:pt-36">
         <div
           className={cn("absolute inset-0", hoveredRoom ? "cursor-pointer" : "cursor-default")}
           onPointerMove={onHeroMove}
@@ -129,7 +129,7 @@ export function CastleHub() {
 
         <nav
           aria-label="Rooms"
-          className="pointer-events-auto absolute inset-x-0 bottom-6 z-10 flex snap-x snap-mandatory gap-3 overflow-x-auto px-6 pb-1 sm:px-10"
+          className="pointer-events-auto absolute inset-x-0 bottom-6 z-10 flex w-full min-w-0 max-w-full snap-x snap-mandatory gap-3 overflow-x-auto px-6 pb-1 sm:px-10"
         >
           {ROOMS.map((room) => (
             <button

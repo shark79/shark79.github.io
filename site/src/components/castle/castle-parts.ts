@@ -13,6 +13,7 @@ export const COLOR = {
   apricot: 0xf9cba0,
   butter: 0xfbe6a6,
   cream: 0xfff3df,
+  cloud: 0xfffcf7,
   terracotta: 0xc4523f,
   inkOrange: 0xa8561a,
   ink: 0x1b1714,
@@ -63,6 +64,9 @@ export function clay(color: number, opts: { roughness?: number; sheen?: number; 
   // arch/leaf shapes (irregular UVs from ExtrudeGeometry) it read as hard
   // banding under the sheen highlight, not soft grain. roughnessMap alone
   // gives the tactile variation without that artifact.
+  // A tiny self-emissive floor (same hue, ~6%) keeps pastels reading as
+  // themselves in shadow instead of sliding toward brown/olive — a fully
+  // shadow-lit #FBE6A6 butter roof shouldn't look like a different color.
   return new THREE.MeshPhysicalMaterial({
     color,
     roughness: opts.roughness ?? 0.78,
@@ -71,6 +75,8 @@ export function clay(color: number, opts: { roughness?: number; sheen?: number; 
     sheenColor: new THREE.Color(0xffffff),
     sheenRoughness: 0.85,
     roughnessMap: getGrain(),
+    emissive: color,
+    emissiveIntensity: 0.06,
   });
 }
 
@@ -205,30 +211,29 @@ export function buildOpening(
   w: number,
   h: number,
   anchor: THREE.Vector3,
+  leafColor: number = COLOR.apricot,
 ): OpeningRig {
   const group = new THREE.Group();
   group.position.copy(anchor);
 
   const leaves: Leaf[] = [];
   const frameColor = COLOR.cream;
-  const leafColor = COLOR.terracotta;
 
-  // Recess so the opening reads as a hole, not a decal. Arched gates have a
-  // fanlight above the door line, so give them extra headroom.
+  // Arched gates have a fanlight above the door line, so their glow needs
+  // extra headroom to match.
   const recessH = kind === "arch" ? h * 1.3 : h * 0.96;
   const recessOffsetY = kind === "arch" ? h * 0.12 : 0;
-  const recess = new THREE.Mesh(
-    new THREE.PlaneGeometry(w * 0.96, recessH),
-    new THREE.MeshBasicMaterial({ color: 0x2a1b14 }),
-  );
-  recess.position.set(0, recessOffsetY, -0.04);
-  group.add(recess);
 
+  // A warm glow right at the threshold when the room is lit. No opaque
+  // backing plane here on purpose — every opening now has a real interior
+  // behind it (see castle-interiors.ts), and an opaque plane in front of
+  // that interior would just hide it. Additive blending means this can
+  // never occlude what's behind it either, only brighten it.
   const glow = new THREE.Mesh(
     new THREE.PlaneGeometry(w * 0.9, recessH * 0.94),
-    new THREE.MeshBasicMaterial({ color: COLOR.butter, transparent: true, opacity: 0 }),
+    new THREE.MeshBasicMaterial({ color: COLOR.butter, transparent: true, opacity: 0, blending: THREE.AdditiveBlending, depthWrite: false }),
   );
-  glow.position.set(0, recessOffsetY, -0.035);
+  glow.position.set(0, recessOffsetY, 0.01);
   group.add(glow);
 
   const light = new THREE.PointLight(COLOR.butter, 0, 3.2, 2);
@@ -356,15 +361,22 @@ export function buildFlowerBox(width: number) {
 }
 
 let puffGeo: THREE.SphereGeometry | null = null;
-/** Shared smooth-sphere puff geometry (12x8 segments — round, not faceted) for every cloud. */
+/** Shared smooth-sphere puff geometry (20x14 segments — genuinely round, not faceted). */
 function cloudPuffGeometry() {
-  puffGeo ??= new THREE.SphereGeometry(1, 12, 8);
+  puffGeo ??= new THREE.SphereGeometry(1, 20, 14);
   return puffGeo;
 }
 
-/** A handful of soft, fewer-but-bigger drifting cloud puffs, instanced. */
+function cloudMaterial(roughness: number, sheen: number) {
+  // Near-white; the faint warm underside comes for free from the scene's
+  // tan hemisphere ground-bounce lighting the puffs' lower hemisphere.
+  return clay(COLOR.cloud, { roughness, sheen });
+}
+
+/** A handful of soft, fewer-but-bigger drifting cloud puffs, instanced. Tight
+ * overlapping offsets so puffs read as one fluffy mass, not separate potatoes. */
 export function buildCloudField(count: number, radius: number, yRange: [number, number]) {
-  const inst = new THREE.InstancedMesh(cloudPuffGeometry(), clay(COLOR.cream, { roughness: 0.96, sheen: 0.08 }), count * 4);
+  const inst = new THREE.InstancedMesh(cloudPuffGeometry(), cloudMaterial(0.9, 0.12), count * 5);
   const dummy = new THREE.Object3D();
   let idx = 0;
   const clouds: { angle: number; r: number; y: number; speed: number }[] = [];
@@ -376,11 +388,12 @@ export function buildCloudField(count: number, radius: number, yRange: [number, 
     clouds.push({ angle, r, y, speed });
     const cx = Math.cos(angle) * r;
     const cz = Math.sin(angle) * r;
-    const puffs = 4;
+    const puffs = 5;
+    const baseS = 0.38 + Math.random() * 0.16;
     for (let p = 0; p < puffs; p++) {
-      dummy.position.set(cx + (Math.random() - 0.5) * 1.1, y + (Math.random() - 0.5) * 0.16, cz + (Math.random() - 0.5) * 0.6);
-      const s = 0.32 + Math.random() * 0.3;
-      dummy.scale.set(s, s * 0.62, s);
+      dummy.position.set(cx + (Math.random() - 0.5) * 0.7, y + (Math.random() - 0.5) * 0.1, cz + (Math.random() - 0.5) * 0.38);
+      const s = baseS * (0.82 + Math.random() * 0.28);
+      dummy.scale.set(s, s * 0.7, s);
       dummy.updateMatrix();
       inst.setMatrixAt(idx++, dummy.matrix);
     }
@@ -392,7 +405,7 @@ export function buildCloudField(count: number, radius: number, yRange: [number, 
 /** A ring of soft cloud puffs around the island's rim — the "floating on clouds" skirt
  * that replaces a hard disc edge. */
 export function buildCloudSkirt(count: number, radius: number, y: number) {
-  const inst = new THREE.InstancedMesh(cloudPuffGeometry(), clay(COLOR.cream, { roughness: 0.95, sheen: 0.1 }), count);
+  const inst = new THREE.InstancedMesh(cloudPuffGeometry(), cloudMaterial(0.9, 0.15), count);
   const dummy = new THREE.Object3D();
   for (let i = 0; i < count; i++) {
     const a = (i / count) * Math.PI * 2 + Math.random() * 0.2;
@@ -462,14 +475,14 @@ export function buildLantern() {
   const g = new THREE.Group();
   const post = mesh(new THREE.CylinderGeometry(0.02, 0.024, 0.5, 6), COLOR.inkOrange, { roughness: 0.4 });
   post.position.y = 0.25;
+  // Emissive glass sells the glow on its own — two real lights per lantern
+  // pair (four total) isn't worth the shader cost across every frame.
   const globe = new THREE.Mesh(
     new THREE.SphereGeometry(0.075, 10, 8),
-    new THREE.MeshPhysicalMaterial({ color: COLOR.butter, roughness: 0.3, transmission: 0.55, thickness: 0.3, emissive: COLOR.butter, emissiveIntensity: 0.5 }),
+    new THREE.MeshPhysicalMaterial({ color: COLOR.butter, roughness: 0.3, transmission: 0.55, thickness: 0.3, emissive: COLOR.butter, emissiveIntensity: 0.9 }),
   );
   globe.position.y = 0.52;
-  const light = new THREE.PointLight(COLOR.butter, 0.5, 1.4, 2);
-  light.position.y = 0.52;
-  g.add(post, globe, light);
+  g.add(post, globe);
   return g;
 }
 

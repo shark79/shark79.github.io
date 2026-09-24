@@ -61,28 +61,42 @@ export function buildCastle(): CastleAssembly {
     contact: new THREE.Vector3(0, keep.h + keep.roofH + 0.6, turret.d / 2),
   } as Record<RoomId, THREE.Vector3>;
 
-  const specs: [RoomId, string, "arch" | "window" | "double" | "round" | "flap", number, number][] = [
-    ["about", "01", "window", 0.62, 0.9],
-    ["work", "02", "arch", 1.05, 1.4],
-    ["experience", "03", "window", 0.62, 0.9],
-    ["skills", "04", "double", 0.95, 1.0],
-    ["gallery", "05", "round", 0.6, 0.6],
-    ["contact", "06", "flap", 0.55, 0.5],
+  // Leaf colors cycle blush/apricot/butter per opening — terracotta is reserved
+  // for thin trims (frame rings, pins) so it never dominates a whole frame.
+  const specs: [RoomId, string, "arch" | "window" | "double" | "round" | "flap", number, number, number][] = [
+    ["about", "01", "window", 0.62, 0.9, P.COLOR.blush],
+    ["work", "02", "arch", 1.05, 1.4, P.COLOR.apricot],
+    ["experience", "03", "window", 0.62, 0.9, P.COLOR.butter],
+    ["skills", "04", "double", 0.95, 1.0, P.COLOR.blush],
+    ["gallery", "05", "round", 0.6, 0.6, P.COLOR.apricot],
+    ["contact", "06", "flap", 0.55, 0.5, P.COLOR.butter],
   ];
 
   const openings = new Map<RoomId, P.OpeningRig>();
   const interiors = new Map<RoomId, I.Interior>();
-  for (const [id, n, kind, w, h] of specs) {
-    const rig = P.buildOpening(id, n, kind, w, h, anchors[id]);
+  for (const [id, n, kind, w, h, leafColor] of specs) {
+    const rig = P.buildOpening(id, n, kind, w, h, anchors[id], leafColor);
     world.add(rig.group);
     openings.set(id, rig);
 
+    // The tower/keep walls are complete, hole-less shells (no real cutout at
+    // each opening) — anything positioned *behind* the threshold sits inside
+    // that solid, front-facing geometry and is invisible from outside. So
+    // interiors seen from outside (everything except the gallery hall, which
+    // the camera flies inside of — back-face-culled walls are invisible
+    // *from the inside*, so that one works recessed) are pulled forward to
+    // sit just in front of the wall instead, like a shallow display nook.
     let interior: I.Interior;
-    if (id === "about" || id === "experience") interior = I.buildSmallInterior(id);
-    else if (id === "gallery") interior = I.buildGalleryHall();
-    else interior = I.buildPlainInterior(w, h, P.COLOR.cream);
-    interior.group.position.z = -0.05;
-    if (id === "gallery") interior.group.position.set(0, -0.35, -3.6);
+    if (id === "about" || id === "experience") {
+      interior = I.buildSmallInterior(id);
+      interior.group.position.z = 0.55; // shell depth 0.55 — wall lands flush with the surface
+    } else if (id === "gallery") {
+      interior = I.buildGalleryHall();
+      interior.group.position.set(0, -0.35, -3.6);
+    } else {
+      interior = I.buildPlainInterior(w, h, P.COLOR.cream);
+      interior.group.position.z = 0.42; // shell depth 0.4
+    }
     rig.group.add(interior.group);
     interiors.set(id, interior);
   }

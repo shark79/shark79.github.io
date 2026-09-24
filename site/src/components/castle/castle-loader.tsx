@@ -17,6 +17,13 @@ function alreadyShownThisSession() {
   }
 }
 
+/** Reduced motion skips the loader outright — there's no non-animated version worth a
+ * forced 1.1s pause for, and the animated pennant hoist must not run either way. */
+function shouldSkip() {
+  if (typeof window === "undefined") return false;
+  return alreadyShownThisSession() || window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+}
+
 /**
  * A short, personality-driven loader: a pennant hoists up a tiny clay tower
  * while the 3D world warms up behind it. Pure CSS/SVG — costs nothing to
@@ -25,9 +32,7 @@ function alreadyShownThisSession() {
  * first paint here by design; `suppressHydrationWarning` below is intentional).
  */
 export function CastleLoader() {
-  const [phase, setPhase] = useState<"hidden" | "visible" | "fading">(() =>
-    alreadyShownThisSession() ? "hidden" : "visible",
-  );
+  const [phase, setPhase] = useState<"hidden" | "visible" | "fading">(() => (shouldSkip() ? "hidden" : "visible"));
 
   useEffect(() => {
     if (phase !== "visible") return;
@@ -54,7 +59,7 @@ export function CastleLoader() {
     <div
       aria-hidden
       suppressHydrationWarning
-      className="fixed inset-0 z-[70] flex flex-col items-center justify-center gap-4 bg-[var(--background,#FBF7F1)] transition-opacity ease-[var(--ease-in-out,ease)]"
+      className="pointer-events-none fixed inset-0 z-[70] flex flex-col items-center justify-center gap-4 bg-[var(--background,#FBF7F1)] transition-opacity ease-[var(--ease-in-out,ease)]"
       style={{ opacity: phase === "fading" ? 0 : 1, transitionDuration: `${FADE_MS}ms` }}
     >
       <svg width="72" height="88" viewBox="0 0 72 88" className="overflow-visible">

@@ -38,16 +38,20 @@ function shell(w: number, h: number, depth: number, wallColor: number, floorColo
 }
 
 /** One framed painting: clay frame + aspect-correct picture plane, texture applied later. */
-function paintingFrame(file: string, w: number, h: number, tint: number): PaintingMesh {
-  const target = 0.4;
+function paintingFrame(file: string, w: number, h: number, tint: number, target = 0.4): PaintingMesh {
   const pw = target * (w / Math.max(w, h));
   const ph = target * (h / Math.max(w, h));
   const group = new THREE.Group();
 
   const frame = new THREE.Mesh(roundedBox(pw + 0.06, ph + 0.06, 0.035, 0.012, 1), clay(tint, { roughness: 0.55, sheen: 0.5 }));
+  // Unlit on purpose: a lit material this close to several other light
+  // sources (the opening's own light, hemisphere, key, fill) blows out to a
+  // flat white rectangle — a framed photo should read the same regardless
+  // of what's lighting the room around it. The warm grade is baked into
+  // `color` as a multiplicative tint, not simulated via real lighting.
   const picture = new THREE.Mesh(
     new THREE.PlaneGeometry(pw, ph),
-    new THREE.MeshStandardMaterial({ color: 0xfff6ea, roughness: 0.95, emissive: 0x2a1c12, emissiveIntensity: 0.15 }),
+    new THREE.MeshBasicMaterial({ color: 0xe9d9c0 }),
   );
   picture.position.z = 0.02;
   frame.castShadow = true;
@@ -94,44 +98,47 @@ function loadTexture(file: string): Promise<THREE.Texture> {
 
 /** Study (about) and Hall (experience): a shallow lit recess with a couple of props. */
 export function buildSmallInterior(room: "about" | "experience"): Interior {
-  const g = shell(1.3, 1.1, 0.55, COLOR.cream, COLOR.apricot);
-  const light = new THREE.PointLight(COLOR.butter, 0.9, 2.2, 2);
-  light.position.set(0, 0.3, -0.2);
-  g.add(light);
+  // No dedicated interior light — the opening's own `rig.light` (right at the
+  // threshold) already lights this shallow recess once the room is visited;
+  // a real light budget adds up fast across six openings' worth of interiors.
+  // Narrower than earlier drafts: this opening is only 0.62 wide, and props
+  // positioned past roughly ±0.28 sit behind the wall/frame, invisible from
+  // outside — everything here stays within that sightline.
+  const g = shell(0.95, 1.05, 0.55, COLOR.cream, COLOR.apricot);
 
   if (room === "about") {
     // A little stacked bookshelf against the back wall + a desk lamp.
     for (let i = 0; i < 3; i++) {
-      const book = new THREE.Mesh(roundedBox(0.05, 0.18, 0.14, 0.006, 1), clay(TINTS[i % TINTS.length], { roughness: 0.6 }));
-      book.position.set(-0.42 + i * 0.06, -0.36, -0.45);
+      const book = new THREE.Mesh(roundedBox(0.045, 0.16, 0.12, 0.006, 1), clay(TINTS[i % TINTS.length], { roughness: 0.6 }));
+      book.position.set(-0.28 + i * 0.05, -0.4, -0.4);
       book.rotation.y = (Math.random() - 0.5) * 0.1;
       g.add(book);
     }
-    const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.05, 0.06, 0.02, 10), clay(COLOR.terracotta));
-    lampBase.position.set(0.38, -0.44, -0.35);
+    const lampBase = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.05, 0.02, 10), clay(COLOR.terracotta));
+    lampBase.position.set(0.26, -0.46, -0.32);
     const lampShade = new THREE.Mesh(
-      new THREE.ConeGeometry(0.05, 0.07, 10, 1, true),
+      new THREE.ConeGeometry(0.04, 0.06, 10, 1, true),
       new THREE.MeshStandardMaterial({ color: COLOR.butter, emissive: COLOR.butter, emissiveIntensity: 0.6, side: THREE.DoubleSide }),
     );
-    lampShade.position.set(0.38, -0.34, -0.35);
+    lampShade.position.set(0.26, -0.38, -0.32);
     g.add(lampBase, lampShade);
   } else {
     // A little pennant banner + a bench.
-    const banner = new THREE.Mesh(new THREE.PlaneGeometry(0.5, 0.16), clay(COLOR.terracotta, { roughness: 0.6, sheen: 0.5 }));
-    banner.position.set(0, 0.32, -0.5);
-    const bench = new THREE.Mesh(roundedBox(0.55, 0.08, 0.16, 0.015, 1), clay(COLOR.cream, { roughness: 0.8 }));
-    bench.position.set(0, -0.46, -0.25);
+    const banner = new THREE.Mesh(new THREE.PlaneGeometry(0.36, 0.13), clay(COLOR.terracotta, { roughness: 0.6, sheen: 0.5 }));
+    banner.position.set(0, 0.34, -0.5);
+    const bench = new THREE.Mesh(roundedBox(0.4, 0.07, 0.14, 0.015, 1), clay(COLOR.cream, { roughness: 0.8 }));
+    bench.position.set(0, -0.48, -0.22);
     g.add(banner, bench);
   }
 
   const paintings = PAINTINGS.filter((p) => p.room === room).map((p, i) => {
-    const pm = paintingFrame(p.file, p.w, p.h, TINTS[i % TINTS.length]);
-    pm.group.position.set(i === 0 ? -0.3 : 0.3, 0.05, -0.5);
+    const pm = paintingFrame(p.file, p.w, p.h, TINTS[i % TINTS.length], 0.22);
+    pm.group.position.set(i === 0 ? -0.14 : 0.14, -0.02, -0.46);
     g.add(pm.group);
     return pm;
   });
 
-  return { group: g, light, paintings };
+  return { group: g, paintings };
 }
 
 /**
@@ -159,23 +166,22 @@ export function buildGalleryHall(): Interior {
     return pm;
   });
 
-  for (const x of [-wallW * 0.3, 0, wallW * 0.3]) {
-    const light = new THREE.PointLight(COLOR.butter, 0.7, 3, 2);
-    light.position.set(x, 0.8, 0.6);
-    g.add(light);
-  }
+  // One light for the whole hall, not one per painting — each frame's picture
+  // material already carries its own warm emissive tint (see loadRoomTextures).
+  const light = new THREE.PointLight(COLOR.butter, 1.1, 6, 2);
+  light.position.set(0, 0.9, 0.7);
+  g.add(light);
 
-  return { group: g, paintings: frames };
+  return { group: g, light, paintings: frames };
 }
 
 export function loadRoomTextures(interior: Interior) {
   interior.paintings.forEach((pm) => {
     loadTexture(pm.file)
       .then((tex) => {
-        const mat = pm.picture.material as THREE.MeshStandardMaterial;
+        const mat = pm.picture.material as THREE.MeshBasicMaterial;
         mat.map = tex;
-        mat.color.set(0xfff6ea);
-        mat.emissiveIntensity = 0.08;
+        mat.color.set(0xfff2df); // subtle warm grade, still legible — not a desaturating tint
         mat.needsUpdate = true;
       })
       .catch(() => {
@@ -191,11 +197,9 @@ export function disposePaintingTextures() {
 
 /** A generic, prop-free lit recess for the rooms without a bespoke diorama yet. */
 export function buildPlainInterior(w: number, h: number, wallColor: number): Interior {
+  // No dedicated light here either — see buildSmallInterior's note.
   const g = shell(w, h, 0.4, wallColor, COLOR.apricot);
-  const light = new THREE.PointLight(COLOR.butter, 0.7, 1.8, 2);
-  light.position.set(0, 0.1, -0.15);
-  g.add(light);
-  return { group: g, light, paintings: [] };
+  return { group: g, paintings: [] };
 }
 
 export type RoomInteriors = Partial<Record<RoomId, Interior>>;

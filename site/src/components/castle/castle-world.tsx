@@ -38,6 +38,7 @@ export function CastleWorld({ onSceneReady, onActiveRoomChange }: Props) {
         scene.onActiveRoomChange = (id) => onActiveRoomChange?.(id);
         sceneRef.current = scene;
         onSceneReady?.(scene);
+        if (process.env.NODE_ENV !== "production") (window as unknown as { __castleDebug?: unknown }).__castleDebug = scene;
         measure();
         onScroll();
         if (!document.hidden) scene.start();
