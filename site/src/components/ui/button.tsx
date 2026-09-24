@@ -15,7 +15,7 @@ const buttonVariants = cva(
     variants: {
       variant: {
         primary:
-          "clay-sm clay-interactive rounded-full bg-primary text-primary-foreground hover:brightness-105",
+          "clay-sm clay-interactive clay-primary rounded-full text-primary-foreground hover:brightness-105",
         soft: "clay-sm clay-interactive rounded-full bg-card text-foreground hover:text-primary",
         ghost:
           "rounded-full text-muted-foreground hover:text-foreground hover:bg-muted",

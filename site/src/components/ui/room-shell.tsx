@@ -26,7 +26,9 @@ export function RoomShell({
     >
       <div
         className={cn(
-          "mx-auto w-full max-w-2xl px-5 sm:px-8 lg:mx-0 lg:ml-[7vw] lg:max-w-[50%]",
+          // lg:ml-56 clears the fixed bottom-left room index (~24-184px) so
+          // that panel never overlaps this column's text at any scroll depth.
+          "mx-auto w-full max-w-2xl px-5 sm:px-8 lg:mx-0 lg:ml-56 lg:max-w-[46%]",
           className,
         )}
       >

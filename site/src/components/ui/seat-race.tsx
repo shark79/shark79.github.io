@@ -149,7 +149,7 @@ export function SeatRace() {
           type="button"
           disabled={busy || done}
           onClick={() => fire(["A", "B"])}
-          className="clay-sm clay-interactive min-h-11 flex-1 rounded-full bg-primary px-3 py-2.5 text-sm font-medium text-primary-foreground disabled:pointer-events-none disabled:opacity-40"
+          className="clay-sm clay-interactive clay-primary min-h-11 flex-1 rounded-full px-3 py-2.5 text-sm font-medium text-primary-foreground disabled:pointer-events-none disabled:opacity-40"
         >
           Both tap at once
         </button>

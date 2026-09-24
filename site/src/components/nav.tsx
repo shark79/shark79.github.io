@@ -56,7 +56,7 @@ export function Nav() {
 
           <a
             href="#contact"
-            className="clay-sm clay-interactive hidden h-9 items-center rounded-full bg-primary px-4 text-xs font-medium text-primary-foreground sm:inline-flex"
+            className="clay-sm clay-interactive clay-primary hidden h-9 items-center rounded-full px-4 text-xs font-medium text-primary-foreground sm:inline-flex"
           >
             Say hi
           </a>
@@ -92,7 +92,7 @@ export function Nav() {
             <a
               href="#contact"
               onClick={() => setOpen(false)}
-              className="clay-sm clay-interactive mt-2 flex min-h-11 items-center justify-center rounded-full bg-primary px-4 text-sm font-medium text-primary-foreground"
+              className="clay-sm clay-interactive clay-primary mt-2 flex min-h-11 items-center justify-center rounded-full px-4 text-sm font-medium text-primary-foreground"
             >
               Say hi
             </a>

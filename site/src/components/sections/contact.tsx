@@ -6,13 +6,13 @@ const room = ROOMS.find((r) => r.id === "contact")!;
 export function Contact() {
   return (
     <RoomShell room={room}>
-      <p className="max-w-[46ch] text-lg leading-relaxed text-muted-foreground sm:text-xl">
+      <p className="max-w-[18ch] font-heading text-3xl leading-[1.1] font-semibold tracking-tight text-foreground sm:text-4xl">
         Send a message up the tower.
       </p>
 
       <a
         href={`mailto:${PROFILE.email}`}
-        className="clay clay-interactive inline-flex min-h-14 items-center gap-3 rounded-full bg-primary px-7 text-base font-medium text-primary-foreground sm:text-lg"
+        className="clay clay-interactive clay-primary inline-flex min-h-14 items-center gap-3 rounded-full px-7 text-base font-medium text-primary-foreground sm:text-lg"
       >
         {PROFILE.email}
         <span aria-hidden="true" className="text-xl">↗</span>

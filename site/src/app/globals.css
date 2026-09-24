@@ -195,6 +195,17 @@
 .clay-wrong {
   background: color-mix(in oklch, var(--destructive) 10%, var(--card));
 }
+/* Solid primary fill for a clay element (a Tailwind bg-primary utility
+   can't win here: .clay/.clay-sm set their own background and are declared
+   later in this file than any Tailwind utility, so it always wins the
+   cascade). Use this class, never bg-primary, on a .clay/.clay-sm element. */
+.clay-primary {
+  background: linear-gradient(
+    135deg,
+    color-mix(in oklch, var(--primary), white 6%),
+    color-mix(in oklch, var(--primary), black 6%)
+  );
+}
 
 /* ------------------------------------------------------------- surface --- */
 /* Faint paper grain over the whole shot — world and UI both read as one

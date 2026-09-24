@@ -11,6 +11,9 @@ import { cn } from "@/lib/utils";
  */
 export function RoomIndex() {
   const [active, setActive] = useState<string>(ROOMS[0].id);
+  // Stays hidden over the hero — it would only collide with the castle's
+  // own door rail there — and fades in once any room has scrolled into view.
+  const [visible, setVisible] = useState(false);
 
   useEffect(() => {
     const els = ROOMS.map((r) => document.getElementById(r.id)).filter(
@@ -18,14 +21,29 @@ export function RoomIndex() {
     );
     if (els.length === 0) return;
 
+    // Track every currently-intersecting room by its own top offset — an
+    // IntersectionObserver callback only reports entries that *changed*,
+    // so the "topmost visible" pick has to be recomputed from this running
+    // set, not from the entries array alone.
+    const tops = new Map<string, number>();
+
     const observer = new IntersectionObserver(
       (entries) => {
-        const visible = entries.filter((e) => e.isIntersecting);
-        if (visible.length === 0) return;
-        const topmost = visible.reduce((a, b) =>
-          a.boundingClientRect.top < b.boundingClientRect.top ? a : b,
-        );
-        setActive(topmost.target.id);
+        for (const entry of entries) {
+          if (entry.isIntersecting) tops.set(entry.target.id, entry.boundingClientRect.top);
+          else tops.delete(entry.target.id);
+        }
+        setVisible(tops.size > 0);
+        if (tops.size === 0) return;
+        let bestId: string = ROOMS[0].id;
+        let bestTop = Infinity;
+        tops.forEach((top, id) => {
+          if (top < bestTop) {
+            bestTop = top;
+            bestId = id;
+          }
+        });
+        setActive(bestId);
       },
       { rootMargin: "-45% 0px -45% 0px", threshold: 0 },
     );
@@ -36,7 +54,10 @@ export function RoomIndex() {
   return (
     <nav
       aria-label="Rooms"
-      className="fixed bottom-6 left-6 z-50 hidden lg:block"
+      className={cn(
+        "fixed bottom-6 left-6 z-50 hidden transition-opacity duration-[var(--dur-hover)] lg:block",
+        visible ? "opacity-100" : "pointer-events-none opacity-0",
+      )}
     >
       <ol className="clay-sm flex flex-col gap-1 rounded-[var(--radius-lg)] bg-card/95 p-2">
         {ROOMS.map((room) => {

@@ -1,3 +1,5 @@
+"use client";
+
 import { ABOUT, ABOUT_QUIZ, EDUCATION, ROOMS, STATS } from "@/lib/content";
 import { solve } from "@/lib/progress";
 import { RoomShell } from "@/components/ui/room-shell";
