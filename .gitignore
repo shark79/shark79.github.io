@@ -1,2 +1,6 @@
 .playwright-mcp/
 *.code-workspace
+
+# Playwright MCP drops screenshots in the cwd
+/*.png
+.playwright-mcp/

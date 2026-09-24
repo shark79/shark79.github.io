@@ -21,7 +21,10 @@ export function RoomVisitTracker() {
           if (entry.isIntersecting) visitRoom(entry.target.id as RoomId);
         }
       },
-      { threshold: 0.4 },
+      // A band across the middle of the viewport, not a fraction of the
+      // section: a room taller than 2.5 screens (Projects on a phone) could
+      // never be 40% visible and so would never count as visited.
+      { rootMargin: "-45% 0px -45% 0px" },
     );
     els.forEach((el) => observer.observe(el));
     return () => observer.disconnect();
