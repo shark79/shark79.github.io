@@ -12,10 +12,13 @@ spiral sculpture that turns as eleven projects hand over one to the next.
 Most visitors arrive by scanning a QR code at a conference, on a phone. The site is meant to
 read in a minute and feel like an object worth scrolling.
 
-- **Hero**: a procedural cloud shader (three.js, no video or image files) behind thin,
-  wide-tracked type.
+- **Hero**: a volumetric cloud sky (three.js, CPU-baked 3D noise and raymarched lighting)
+  behind a large centred name. Transparent wisps drift across a few letters at a time.
+- **Transition**: scrolling flies through the fixed sky into white mist, where the spiral
+  emerges with fog and a gentle lift. Reduced motion uses a simple crossfade.
 - **Work**: a pinned, scroll-driven scene. A white slatted spiral, built from 210 instanced
-  slats, turns while each project transitions in with its numbers and stack.
+  slats, turns while each project transitions in with its numbers and stack. Each project
+  has 135vh of scroll with proximity snap.
 - **About, Experience, Toolkit, Gallery, Contact**: monochrome editorial sections. The
   gallery is a grayscale showreel with a full-size lightbox.
 
@@ -31,6 +34,7 @@ npm install
 npm run dev       # http://localhost:3000
 npm run lint
 npm run build     # static export to site/out/
+python3 -m http.server 8765 --directory out  # preview the export
 ```
 
 ## Deployment
@@ -51,8 +55,16 @@ date. The list is sorted newest-first in code, so never hand-order it.
 site/src/
   app/                  layout, page, globals.css (tokens)
   components/sections/  hero, work, about, experience, skills, gallery, contact
-  components/visuals/   cloud-scene.ts, spiral-scene.ts, use-scene.ts (lazy three.js)
+  components/visuals/   clouds, wisps, spiral, shared scroll progress, lazy scene hook
   components/ui/        section head, reveal observer, photo lightbox
   lib/content.ts        every word on the site
 site/public/gallery/    photos (+ paintings/: 640px web copies used in the showreel)
 ```
+
+The sky uses 48 raymarch steps at half resolution on desktop, 36 at 0.42 on phones,
+and stops at the end of the transition. Scenes pause when hidden; the name remains a real
+heading, and a CSS sky is available without WebGL. No new media assets or dependencies.
+
+Validated with TypeScript, ESLint, the production export and 86 Chromium checks across
+1440px, 390px and 320px widths, including project scrolling/focus, lightbox, mobile menu,
+reduced motion and WebGL fallback. See the design notes for the rendering details.

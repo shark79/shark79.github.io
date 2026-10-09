@@ -37,6 +37,31 @@ body {
   text-rendering: optimizeLegibility;
 }
 
+main { isolation: isolate; }
+
+.sky-fallback {
+  background: radial-gradient(ellipse at 60% 10%, #9fb8d1 0%, #dfe5ea 45%, #f1f2f3 100%);
+  opacity: var(--sky-fade, 1);
+}
+
+.hero-name {
+  font-size: clamp(34px, 11.3vw, 44px);
+  letter-spacing: 0.14em;
+  /* Balance the final tracked space so both lines are visually centred. */
+  padding-left: 0.14em;
+}
+
+@media (min-width: 640px) {
+  .hero-name { font-size: clamp(44px, 9vw, 140px); }
+}
+
+/* The fixed sky only participates in the hero and project story. */
+main > section:not(#top):not(#work) {
+  position: relative;
+  z-index: 10;
+  background: var(--background);
+}
+
 ::selection {
   background: var(--foreground);
   color: var(--background);
@@ -88,6 +113,7 @@ body {
 @media (prefers-reduced-motion: reduce) {
   html {
     scroll-behavior: auto;
+    scroll-snap-type: none;
   }
   .reveal {
     transform: none;

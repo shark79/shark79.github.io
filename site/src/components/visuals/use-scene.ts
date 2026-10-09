@@ -8,9 +8,11 @@ type Scene = { resize: () => void; dispose: () => void };
  * Mounts a three.js scene into a canvas after first paint. `load` is a
  * dynamic import, so three.js never sits in the initial bundle. If WebGL is
  * unavailable the canvas just stays empty and the CSS backdrop shows.
+ * `onReady` initialises scroll state after the asynchronous import resolves.
  */
 export function useScene<S extends Scene>(
   load: () => Promise<(canvas: HTMLCanvasElement, reducedMotion: boolean) => S>,
+  onReady?: (scene: S) => void,
 ) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const sceneRef = useRef<S | null>(null);
@@ -24,6 +26,7 @@ export function useScene<S extends Scene>(
       .then((create) => {
         if (disposed || !canvasRef.current) return;
         sceneRef.current = create(canvasRef.current, reduced);
+        onReady?.(sceneRef.current);
         window.addEventListener("resize", onResize);
       })
       .catch(() => {});

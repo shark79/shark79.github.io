@@ -1,57 +1,68 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { ArrowDown, ArrowRight } from "lucide-react";
 import { PROFILE } from "@/lib/content";
 import { useScene } from "@/components/visuals/use-scene";
+import { skyProgress } from "@/components/visuals/sky-progress";
 
 const loadClouds = () => import("@/components/visuals/cloud-scene").then((m) => m.createClouds);
+const loadWisps = () => import("@/components/visuals/wisp-scene").then((m) => m.createWisps);
 
 export function Hero() {
-  const { canvasRef } = useScene(loadClouds);
+  const { canvasRef, sceneRef } = useScene(loadClouds, (scene) => scene.setFly(skyProgress()));
+  const { canvasRef: wispRef } = useScene(loadWisps);
+  const backdropRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      const fly = skyProgress();
+      sceneRef.current?.setFly(fly);
+      // CSS fallback follows the same handoff when WebGL is unavailable.
+      backdropRef.current?.style.setProperty("--sky-fade", String(1 - fly));
+    };
+    const onScroll = () => { if (!raf) raf = requestAnimationFrame(update); };
+    update();
+    addEventListener("scroll", onScroll, { passive: true });
+    addEventListener("resize", onScroll);
+    return () => {
+      cancelAnimationFrame(raf);
+      removeEventListener("scroll", onScroll);
+      removeEventListener("resize", onScroll);
+    };
+  }, [sceneRef]);
 
   return (
-    <section id="top" className="relative h-svh min-h-[560px] overflow-hidden">
-      {/* Painted sky shows while the shader loads (and if WebGL is off). */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-0 bg-[radial-gradient(ellipse_at_60%_10%,#9fb8d1_0%,#dfe5ea_45%,#f1f2f3_100%)]"
-      />
-      <canvas ref={canvasRef} aria-hidden="true" className="absolute inset-0 h-full w-full" />
-      {/* The sky dissolves into the white page. */}
-      <div
-        aria-hidden="true"
-        className="absolute inset-x-0 bottom-0 h-40 bg-gradient-to-b from-transparent to-background"
-      />
-
-      <div className="relative mx-auto flex h-full max-w-[1400px] flex-col justify-center px-6 sm:px-12">
-        <div className="max-w-xl max-sm:mx-auto max-sm:text-center">
+    <>
+      <div ref={backdropRef} aria-hidden="true" className="sky-backdrop pointer-events-none fixed inset-0 z-0 bg-background">
+        <div className="sky-fallback absolute inset-0" />
+        <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
+      </div>
+      <section id="top" className="relative z-10 h-svh min-h-[560px]">
+        <div className="mx-auto flex h-full max-w-[1600px] flex-col items-center justify-center px-6 text-center sm:px-12">
           <p className="label text-foreground/70">{PROFILE.role}</p>
-          <h1 className="mt-6 text-[clamp(30px,5.4vw,64px)] font-light leading-[1.1] tracking-[0.18em] uppercase">
-            Shashank
-            <br />
-            Jamkhandi
-          </h1>
-          <p className="mt-7 text-[17px] leading-relaxed font-light text-foreground/80">
+          <div className="relative mt-7">
+            <h1 className="hero-name font-light leading-[1.1] uppercase">
+              {PROFILE.name.split(" ").map((name) => <span key={name} className="block">{name}</span>)}
+            </h1>
+            <canvas ref={wispRef} aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" />
+          </div>
+          <p className="mt-8 max-w-[320px] text-[17px] leading-relaxed font-light text-foreground/80 sm:max-w-none sm:text-[19px]">
             {PROFILE.tagline[0]} {PROFILE.tagline[1]}
           </p>
-          <span aria-hidden="true" className="mt-7 block h-px w-14 bg-foreground/40 max-sm:mx-auto" />
-          <a
-            href="#work"
-            className="group mt-7 inline-flex items-center gap-3 text-[17px] font-light tracking-wide transition-opacity hover:opacity-70"
-          >
+          <span aria-hidden="true" className="mt-7 block h-px w-14 bg-foreground/40" />
+          <a href="#work" className="group mt-7 inline-flex min-h-11 items-center gap-3 text-[17px] font-light tracking-wide transition-opacity hover:opacity-70">
             See what I&apos;ve built
             <ArrowRight className="size-4 transition-transform duration-500 ease-[var(--ease-out)] group-hover:translate-x-1" />
           </a>
         </div>
-      </div>
-
-      <a
-        href="#work"
-        className="label absolute bottom-8 left-6 flex items-center gap-3 sm:left-12"
-      >
-        <ArrowDown className="size-4" />
-        Scroll down to discover
-      </a>
-    </section>
+        <a href="#work" className="label absolute inset-x-0 bottom-8 mx-auto flex min-h-11 w-fit items-center gap-3">
+          <ArrowDown className="size-4" />
+          Scroll down to discover
+        </a>
+      </section>
+    </>
   );
 }

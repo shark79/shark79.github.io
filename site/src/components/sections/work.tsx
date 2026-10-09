@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowUpRight } from "lucide-react";
 import { PROJECTS } from "@/lib/content";
 import { useScene } from "@/components/visuals/use-scene";
+import { spiralEntrance } from "@/components/visuals/sky-progress";
 import { cn } from "@/lib/utils";
 
 const loadSpiral = () => import("@/components/visuals/spiral-scene").then((m) => m.createSpiral);
@@ -21,7 +22,11 @@ const pad = (n: number) => String(n).padStart(2, "0");
  * link inside one scrolls the story to that slide.
  */
 export function Work() {
-  const { canvasRef, sceneRef } = useScene(loadSpiral);
+  const { canvasRef, sceneRef } = useScene(loadSpiral, (scene) => {
+    scene.setEnter(spiralEntrance());
+    const el = document.getElementById("work");
+    if (el) scene.setProgress(Math.min(1, Math.max(0, (scrollY - el.offsetTop) / (el.offsetHeight - innerHeight))));
+  });
   const sectionRef = useRef<HTMLElement>(null);
   const [active, setActive] = useState(0);
 
@@ -34,6 +39,7 @@ export function Work() {
       const travel = el.offsetHeight - innerHeight;
       const p = Math.min(1, Math.max(0, (scrollY - el.offsetTop) / travel));
       sceneRef.current?.setProgress(p);
+      sceneRef.current?.setEnter(spiralEntrance());
       setActive(Math.min(N - 1, Math.floor(p * N)));
     };
     const onScroll = () => {
@@ -62,7 +68,7 @@ export function Work() {
       ref={sectionRef}
       aria-label="Selected work"
       style={{ height: `calc(${N * STEP_VH}vh + 100vh)` }}
-      className="relative"
+      className="relative z-10"
     >
       {/* One soft snap point at the middle of each project's stretch: if a
           scroll stops between projects, the page settles on the nearer one. */}

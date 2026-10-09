@@ -26,6 +26,7 @@ const SPINE = new THREE.CatmullRomCurve3(
 
 export type SpiralScene = {
   setProgress: (p: number) => void;
+  setEnter: (e: number) => void;
   resize: () => void;
   dispose: () => void;
 };
@@ -41,11 +42,15 @@ export function createSpiral(canvas: HTMLCanvasElement, reducedMotion: boolean):
 
   const scene = new THREE.Scene();
   const pmrem = new THREE.PMREMGenerator(renderer);
-  const env = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+  const room = new RoomEnvironment();
+  const envTarget = pmrem.fromScene(room, 0.04);
+  room.dispose();
+  const env = envTarget.texture;
   scene.environment = env;
   scene.environmentIntensity = 0.32;
   // Far slats dissolve into the page instead of ending on a hard edge.
-  scene.fog = new THREE.Fog(0xffffff, 14, 26);
+  const fog = new THREE.Fog(0xffffff, 14, 14.1);
+  scene.fog = fog;
 
   const camera = new THREE.PerspectiveCamera(30, 1, 0.1, 60);
   camera.position.set(0, 0, 15);
@@ -95,17 +100,33 @@ export function createSpiral(canvas: HTMLCanvasElement, reducedMotion: boolean):
   let current = 0;
   let raf = 0;
   let last = performance.now();
+  let enter = 0;
+  let baseY = 0;
+  let visible = false;
+  let dirty = true;
+  const io = new IntersectionObserver(([e]) => {
+    visible = e.isIntersecting;
+    if (visible) invalidate();
+  });
+  io.observe(canvas);
+  function invalidate() { dirty = true; if (!raf) raf = requestAnimationFrame(frame); }
+  const onVisibility = () => { if (!document.hidden && visible) invalidate(); };
+  document.addEventListener("visibilitychange", onVisibility);
 
   function frame(now: number) {
+    raf = 0;
+    if (!visible || document.hidden) return;
     const dt = Math.min((now - last) / 1000, 0.05);
     last = now;
     current += (target - current) * (reducedMotion ? 1 : 1 - Math.exp(-dt * 4));
     const idle = reducedMotion ? 0 : now * 0.00004;
-    sculpture.rotation.y = -0.35 + current * Math.PI * 1.1 + idle;
+    sculpture.rotation.y = -0.35 + current * Math.PI * 1.1 + idle + (reducedMotion ? 0 : (1 - enter) * 0.45);
+    sculpture.position.y = baseY - (reducedMotion ? 0 : (1 - enter) * 1.2);
     sculpture.rotation.z = 0.32;
     layout(current * Math.PI * 1.5 + idle * 2);
-    renderer.render(scene, camera);
-    raf = requestAnimationFrame(frame);
+    if (dirty || !reducedMotion) renderer.render(scene, camera);
+    dirty = false;
+    if (!reducedMotion) raf = requestAnimationFrame(frame);
   }
 
   function resize() {
@@ -115,25 +136,36 @@ export function createSpiral(canvas: HTMLCanvasElement, reducedMotion: boolean):
     // Desktop: sit between the title column and the numbers. Portrait: step
     // back and lift into the top of the stage, above the project text.
     const portrait = w < h;
+    baseY = portrait ? 1.6 : 0;
     camera.position.z = portrait ? 22 : 18.5;
     sculpture.position.set(portrait ? 0 : 0.5, portrait ? 1.6 : 0, 0);
     camera.updateProjectionMatrix();
+    invalidate();
   }
 
   resize();
   layout(0);
-  raf = requestAnimationFrame(frame);
 
   return {
     setProgress: (p) => {
       target = p;
+      invalidate();
+    },
+    setEnter: (e) => {
+      enter = THREE.MathUtils.clamp(e, 0, 1);
+      fog.far = reducedMotion ? 26 : THREE.MathUtils.lerp(fog.near + 0.1, 26, enter);
+      // Fog conceals the form in white; opacity also removes its silhouette.
+      canvas.style.opacity = String(enter);
+      invalidate();
     },
     resize,
     dispose: () => {
       cancelAnimationFrame(raf);
+      io.disconnect();
+      document.removeEventListener("visibilitychange", onVisibility);
       geo.dispose();
       mat.dispose();
-      env.dispose();
+      envTarget.dispose();
       pmrem.dispose();
       renderer.dispose();
     },
