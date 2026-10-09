@@ -55,8 +55,8 @@ export function Gallery() {
   return (
     <section id="gallery" className="py-28 sm:py-40">
       <div className="mx-auto max-w-[1400px] px-6 sm:px-12">
-        <SectionHead n="04" label="Off the clock">
-          Photographs, mostly of buildings looking up.
+        <SectionHead n="04" label="Gallery">
+          Off the clock.
         </SectionHead>
       </div>
 

@@ -24,6 +24,8 @@
 
 html {
   scroll-behavior: smooth;
+  /* Only the project story defines snap points; everywhere else scrolls freely. */
+  scroll-snap-type: y proximity;
   -webkit-text-size-adjust: 100%;
 }
 

@@ -8,8 +8,9 @@ import { cn } from "@/lib/utils";
 
 const loadSpiral = () => import("@/components/visuals/spiral-scene").then((m) => m.createSpiral);
 const N = PROJECTS.length;
-/** Scroll distance per project, in viewport heights. */
-const STEP_VH = 85;
+/** Scroll distance per project, in viewport heights. Generous, so a quick
+ *  flick moves one project rather than skipping past two or three. */
+const STEP_VH = 135;
 
 const pad = (n: number) => String(n).padStart(2, "0");
 
@@ -63,6 +64,17 @@ export function Work() {
       style={{ height: `calc(${N * STEP_VH}vh + 100vh)` }}
       className="relative"
     >
+      {/* One soft snap point at the middle of each project's stretch: if a
+          scroll stops between projects, the page settles on the nearer one. */}
+      {PROJECTS.map((p, i) => (
+        <div
+          key={p.id}
+          aria-hidden="true"
+          style={{ top: `${(i + 0.5) * STEP_VH}vh` }}
+          className="pointer-events-none absolute h-px w-px snap-start"
+        />
+      ))}
+
       <div className="sticky top-0 h-svh overflow-hidden">
         <canvas
           ref={canvasRef}
