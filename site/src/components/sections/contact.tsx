@@ -1,42 +1,41 @@
-import { PROFILE, ROOMS } from "@/lib/content";
-import { RoomShell } from "@/components/ui/room-shell";
-
-const room = ROOMS.find((r) => r.id === "contact")!;
+import { ArrowUpRight } from "lucide-react";
+import { PROFILE } from "@/lib/content";
 
 export function Contact() {
   return (
-    <RoomShell room={room}>
-      <p className="max-w-[18ch] font-heading text-3xl leading-[1.1] font-semibold tracking-tight text-foreground sm:text-4xl">
-        Send a message up the tower.
+    <section id="contact" className="mx-auto max-w-[1400px] px-6 py-28 sm:px-12 sm:py-40">
+      <p className="label reveal text-muted-foreground">
+        05 <span aria-hidden="true">—</span> Contact
       </p>
-
+      <h2 className="reveal mt-6 text-[clamp(44px,9vw,140px)] leading-[0.95] font-light tracking-[-0.04em]">
+        Let&apos;s talk.
+      </h2>
       <a
         href={`mailto:${PROFILE.email}`}
-        className="clay clay-interactive clay-primary inline-flex min-h-14 items-center gap-3 rounded-full px-7 text-base font-medium text-primary-foreground sm:text-lg"
+        className="reveal group mt-12 inline-flex items-center gap-3 border-b border-foreground/30 pb-2 text-[clamp(18px,2.4vw,30px)] font-light break-all transition-colors hover:border-foreground"
       >
         {PROFILE.email}
-        <span aria-hidden="true" className="text-xl">↗</span>
+        <ArrowUpRight className="size-6 shrink-0 transition-transform duration-500 ease-[var(--ease-out)] group-hover:-translate-y-1 group-hover:translate-x-1" />
       </a>
-
-      <div className="flex flex-wrap gap-2.5">
-        <a
-          href={PROFILE.phone.href}
-          className="clay-sm clay-interactive inline-flex min-h-11 items-center rounded-full bg-card px-4 text-sm text-foreground"
-        >
-          {PROFILE.phone.display}
-        </a>
-        {PROFILE.links.map((l) => (
-          <a
-            key={l.href}
-            href={l.href}
-            target="_blank"
-            rel="noreferrer"
-            className="clay-sm clay-interactive inline-flex min-h-11 items-center rounded-full bg-card px-4 text-sm text-foreground"
-          >
-            {l.label}
+      <ul className="reveal mt-14 flex flex-wrap gap-x-10 gap-y-4">
+        <li>
+          <a href={PROFILE.phone.href} className="label inline-block py-2 transition-opacity hover:opacity-60">
+            {PROFILE.phone.display}
           </a>
+        </li>
+        {PROFILE.links.map((l) => (
+          <li key={l.href}>
+            <a
+              href={l.href}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="label inline-flex items-center gap-1.5 py-2 transition-opacity hover:opacity-60"
+            >
+              {l.label} <ArrowUpRight className="size-3.5" />
+            </a>
+          </li>
         ))}
-      </div>
-    </RoomShell>
+      </ul>
+    </section>
   );
 }

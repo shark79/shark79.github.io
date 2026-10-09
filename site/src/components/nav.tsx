@@ -1,104 +1,80 @@
 "use client";
 
-import * as React from "react";
+import { useEffect, useState } from "react";
 import { Menu, X } from "lucide-react";
-import { ROOMS } from "@/lib/content";
-import { TOTAL_ROOMS, useProgress } from "@/lib/progress";
-import { CastleMini } from "@/components/ui/castle-mini";
+import { PROFILE } from "@/lib/content";
+
+const LINKS = [
+  { href: "#work", label: "Work" },
+  { href: "#about", label: "About" },
+  { href: "#experience", label: "Experience" },
+  { href: "#gallery", label: "Gallery" },
+];
 
 export function Nav() {
-  const [open, setOpen] = React.useState(false);
-  const { rooms, keys } = useProgress();
+  const [open, setOpen] = useState(false);
+
+  useEffect(() => {
+    if (!open) return;
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    addEventListener("keydown", onKey);
+    return () => removeEventListener("keydown", onKey);
+  }, [open]);
 
   return (
-    <header className="fixed inset-x-0 top-3 z-50 flex justify-center px-3">
-      <div className="clay-sm relative flex w-full max-w-4xl items-center gap-3 rounded-full bg-card/95 px-3 py-2 sm:px-4">
-        <a
-          href="#top"
-          onClick={() => setOpen(false)}
-          className="shrink-0 rounded-full px-1 font-heading text-base font-semibold tracking-tight"
-        >
-          Shashank
+    <header className="fixed inset-x-0 top-0 z-50">
+      <nav className="mx-auto flex max-w-[1400px] items-center justify-between px-6 pt-6 sm:px-12 sm:pt-8">
+        <a href="#top" className="label py-2 tracking-[0.3em]">
+          SJ
         </a>
 
-        <ul className="hidden flex-1 items-center justify-center gap-6 lg:flex">
-          {ROOMS.map((r) => (
-            <li key={r.id}>
-              <a
-                href={`#${r.id}`}
-                className="text-[13px] font-medium text-muted-foreground transition-colors hover:text-foreground"
-              >
-                {r.label}
-              </a>
-            </li>
+        <div className="glass hidden items-center gap-1 rounded-full p-1 md:flex">
+          {LINKS.map((l) => (
+            <a
+              key={l.href}
+              href={l.href}
+              className="label rounded-full px-4 py-2.5 transition-colors hover:bg-white/70"
+            >
+              {l.label}
+            </a>
           ))}
-        </ul>
-
-        <div className="ml-auto flex items-center gap-3 lg:ml-0">
           <a
-            href="#top"
-            title={`${rooms.length} of ${TOTAL_ROOMS} rooms lit`}
-            className="hidden items-center gap-1.5 sm:flex"
+            href={`mailto:${PROFILE.email}`}
+            className="label ml-1 rounded-full bg-foreground px-5 py-2.5 text-background transition-opacity hover:opacity-85"
           >
-            <CastleMini visited={rooms} />
-            <span className="font-mono text-[11px] tabular-nums text-muted-foreground">
-              {rooms.length}/{TOTAL_ROOMS}
-            </span>
-            {keys.length > 0 && (
-              <span
-                className="font-mono text-[11px] tabular-nums"
-                style={{ color: "var(--ink-orange)" }}
-              >
-                · {keys.length} key{keys.length === 1 ? "" : "s"}
-              </span>
-            )}
+            Get in touch
           </a>
-
-          <a
-            href="#contact"
-            className="clay-sm clay-interactive clay-primary hidden h-9 items-center rounded-full px-4 text-xs font-medium text-primary-foreground sm:inline-flex"
-          >
-            Say hi
-          </a>
-
-          <button
-            type="button"
-            aria-label={open ? "Close menu" : "Open menu"}
-            aria-expanded={open}
-            onClick={() => setOpen((v) => !v)}
-            className="flex size-11 items-center justify-center rounded-full text-foreground lg:hidden"
-          >
-            {open ? <X className="size-5" /> : <Menu className="size-5" />}
-          </button>
         </div>
 
-        {open && (
-          <div className="clay absolute inset-x-0 top-[calc(100%+8px)] rounded-[var(--radius-lg)] bg-card p-4 lg:hidden">
-            <div className="grid grid-cols-2 gap-2">
-              {ROOMS.map((r) => (
+        <button
+          type="button"
+          onClick={() => setOpen((v) => !v)}
+          aria-expanded={open}
+          aria-controls="mobile-menu"
+          aria-label={open ? "Close menu" : "Open menu"}
+          className="glass flex size-11 items-center justify-center rounded-full md:hidden"
+        >
+          {open ? <X className="size-5" /> : <Menu className="size-5" />}
+        </button>
+      </nav>
+
+      {open && (
+        <div id="mobile-menu" className="glass mx-4 mt-3 rounded-3xl p-3 md:hidden">
+          <ul>
+            {[...LINKS, { href: "#contact", label: "Contact" }].map((l) => (
+              <li key={l.href}>
                 <a
-                  key={r.id}
-                  href={`#${r.id}`}
+                  href={l.href}
                   onClick={() => setOpen(false)}
-                  className="clay-sm clay-interactive flex flex-col gap-0.5 rounded-[var(--radius-md)] bg-card px-3.5 py-3"
+                  className="block rounded-2xl px-4 py-3.5 text-[22px] font-light"
                 >
-                  <span className="font-mono text-[10px] tracking-widest text-primary uppercase">
-                    {r.n}
-                  </span>
-                  <span className="font-heading text-sm font-semibold">{r.label}</span>
+                  {l.label}
                 </a>
-              ))}
-            </div>
-            <a
-              href="#contact"
-              onClick={() => setOpen(false)}
-              className="clay-sm clay-interactive clay-primary mt-2 flex min-h-11 items-center justify-center rounded-full px-4 text-sm font-medium text-primary-foreground"
-            >
-              Say hi
-            </a>
-          </div>
-        )}
-      </div>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </header>
   );
 }

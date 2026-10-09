@@ -1,0 +1,215 @@
+"use client";
+
+import { useEffect, useRef, useState } from "react";
+import { ArrowUpRight } from "lucide-react";
+import { PROJECTS } from "@/lib/content";
+import { useScene } from "@/components/visuals/use-scene";
+import { cn } from "@/lib/utils";
+
+const loadSpiral = () => import("@/components/visuals/spiral-scene").then((m) => m.createSpiral);
+const N = PROJECTS.length;
+/** Scroll distance per project, in viewport heights. */
+const STEP_VH = 85;
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/**
+ * The projects as one pinned scene: the spiral sits in a sticky stage and
+ * turns with scroll, while the projects hand over to one another around it.
+ * Every slide stays in the DOM (screen readers read them all); focusing a
+ * link inside one scrolls the story to that slide.
+ */
+export function Work() {
+  const { canvasRef, sceneRef } = useScene(loadSpiral);
+  const sectionRef = useRef<HTMLElement>(null);
+  const [active, setActive] = useState(0);
+
+  useEffect(() => {
+    let raf = 0;
+    const update = () => {
+      raf = 0;
+      const el = sectionRef.current;
+      if (!el) return;
+      const travel = el.offsetHeight - innerHeight;
+      const p = Math.min(1, Math.max(0, (scrollY - el.offsetTop) / travel));
+      sceneRef.current?.setProgress(p);
+      setActive(Math.min(N - 1, Math.floor(p * N)));
+    };
+    const onScroll = () => {
+      if (!raf) raf = requestAnimationFrame(update);
+    };
+    update();
+    addEventListener("scroll", onScroll, { passive: true });
+    addEventListener("resize", onScroll);
+    return () => {
+      cancelAnimationFrame(raf);
+      removeEventListener("scroll", onScroll);
+      removeEventListener("resize", onScroll);
+    };
+  }, [sceneRef]);
+
+  const goTo = (i: number) => {
+    const el = sectionRef.current;
+    if (!el) return;
+    const travel = el.offsetHeight - innerHeight;
+    scrollTo({ top: el.offsetTop + ((i + 0.5) / N) * travel });
+  };
+
+  return (
+    <section
+      id="work"
+      ref={sectionRef}
+      aria-label="Selected work"
+      style={{ height: `calc(${N * STEP_VH}vh + 100vh)` }}
+      className="relative"
+    >
+      <div className="sticky top-0 h-svh overflow-hidden">
+        <canvas
+          ref={canvasRef}
+          aria-hidden="true"
+          className="absolute inset-0 h-full w-full max-sm:h-[62%]"
+        />
+
+        {/* Phones: one shared wash under the text (per-slide washes would stack
+            over the active slide, since later slides paint on top). */}
+        <div
+          aria-hidden="true"
+          className="absolute inset-x-0 bottom-0 z-[5] h-[55%] bg-gradient-to-b from-background/0 via-background/92 via-35% to-background lg:hidden"
+        />
+
+        {/* Header row */}
+        <div className="absolute inset-x-0 top-24 z-10 mx-auto flex max-w-[1400px] items-baseline justify-between px-6 sm:top-28 sm:px-12">
+          <p className="label">Selected work</p>
+          <p className="label tabular-nums" aria-hidden="true">
+            {pad(active + 1)} / {pad(N)}
+          </p>
+        </div>
+
+        {/* Slides */}
+        <ol className="absolute inset-0 z-10">
+          {PROJECTS.map((p, i) => {
+            const state = i === active ? "in" : i < active ? "past" : "next";
+            return (
+              <li
+                key={p.id}
+                aria-current={i === active ? "true" : undefined}
+                onFocusCapture={() => i !== active && goTo(i)}
+                className={cn(
+                  "absolute inset-0 mx-auto max-w-[1400px] px-6 sm:px-12",
+                  state !== "in" && "pointer-events-none",
+                )}
+              >
+                {/* Left: what it is */}
+                <div
+                  className={cn(
+                    "absolute inset-x-6 bottom-10 sm:inset-x-12 lg:right-auto lg:bottom-auto lg:top-1/2 lg:w-[34%] lg:-translate-y-1/2",
+                  )}
+                >
+                  <Line state={state} i={0}>
+                    <p className="label text-muted-foreground">{p.period}</p>
+                  </Line>
+                  <Line state={state} i={1}>
+                    <h3 className="mt-4 text-[clamp(30px,4.2vw,58px)] leading-[1.04] font-normal tracking-[-0.02em]">
+                      {p.name}
+                    </h3>
+                  </Line>
+                  <Line state={state} i={2}>
+                    <p className="mt-5 max-w-md text-[16px] leading-relaxed text-muted-foreground sm:text-[17px]">
+                      {p.brief}
+                    </p>
+                  </Line>
+                  {p.links && (
+                    <Line state={state} i={3}>
+                      <div className="mt-6 flex flex-wrap gap-x-6 gap-y-2">
+                        {p.links.map((l) => (
+                          <a
+                            key={l.href}
+                            href={l.href}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="label group inline-flex items-center gap-1.5 border-b border-foreground/30 pb-1 transition-colors hover:border-foreground"
+                          >
+                            {l.label}
+                            <ArrowUpRight className="size-3.5 transition-transform duration-500 ease-[var(--ease-out)] group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
+                          </a>
+                        ))}
+                      </div>
+                    </Line>
+                  )}
+                </div>
+
+                {/* Right: the numbers (desktop only — mobile keeps it to the essentials) */}
+                <div className="absolute top-1/2 right-12 hidden w-[24%] -translate-y-1/2 lg:block">
+                  <ul className="grid grid-cols-2 gap-x-8 gap-y-9">
+                    {p.stats.map((s, k) => (
+                      <li key={s.label}>
+                        <Line state={state} i={k + 1}>
+                          <p className="text-[clamp(26px,2.4vw,38px)] leading-none font-light tracking-[-0.02em]">
+                            {s.value}
+                          </p>
+                          <p className="mt-2 text-[13px] leading-snug text-muted-foreground">{s.label}</p>
+                        </Line>
+                      </li>
+                    ))}
+                  </ul>
+                  <Line state={state} i={5}>
+                    <p className="label mt-10 leading-6 text-muted-foreground">{p.tags.join("  ·  ")}</p>
+                  </Line>
+                </div>
+              </li>
+            );
+          })}
+        </ol>
+
+        {/* Index ticks */}
+        <nav
+          aria-label="Jump to project"
+          className="absolute top-1/2 right-5 z-20 hidden -translate-y-1/2 flex-col gap-1 lg:flex"
+        >
+          {PROJECTS.map((p, i) => (
+            <button
+              key={p.id}
+              type="button"
+              onClick={() => goTo(i)}
+              aria-label={`${pad(i + 1)}: ${p.name}`}
+              aria-current={i === active ? "true" : undefined}
+              className="group flex h-6 w-6 items-center justify-end"
+            >
+              <span
+                className={cn(
+                  "h-px bg-foreground transition-all duration-500 ease-[var(--ease-out)]",
+                  i === active ? "w-5 opacity-100" : "w-2.5 opacity-30 group-hover:opacity-70",
+                )}
+              />
+            </button>
+          ))}
+        </nav>
+      </div>
+    </section>
+  );
+}
+
+/** One line of a slide: rises in, leaves upward, staggered by `i`. */
+function Line({
+  state,
+  i,
+  children,
+}: {
+  state: "in" | "past" | "next";
+  i: number;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      style={{ transitionDelay: state === "in" ? `${120 + i * 70}ms` : "0ms" }}
+      className={cn(
+        "transition-[opacity,transform,filter] duration-700 ease-[var(--ease-out)] motion-reduce:transform-none motion-reduce:filter-none",
+        state === "in" && "opacity-100",
+        state === "past" && "-translate-y-8 opacity-0 blur-[2px]",
+        state === "next" && "translate-y-8 opacity-0 blur-[2px]",
+      )}
+    >
+      {children}
+    </div>
+  );
+}

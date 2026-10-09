@@ -2,14 +2,9 @@
 
 import { useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
-import { PHOTOS, ROOMS } from "@/lib/content";
-import { RoomShell } from "@/components/ui/room-shell";
-import { openPaintingLightbox } from "@/components/ui/painting-lightbox";
-import { cn } from "@/lib/utils";
-
-const room = ROOMS.find((r) => r.id === "gallery")!;
-
-const FRAMES = ["clay-blush", "clay-apricot", "clay-butter", "clay-cream"] as const;
+import { PHOTOS } from "@/lib/content";
+import { openPhoto } from "@/components/ui/photo-lightbox";
+import { SectionHead } from "@/components/ui/section-head";
 
 export function Gallery() {
   const trackRef = useRef<HTMLDivElement>(null);
@@ -52,80 +47,60 @@ export function Gallery() {
     const track = trackRef.current;
     if (!track) return;
     const frame = track.querySelector<HTMLElement>("[data-gallery-frame]");
-    const gap = 28;
+    const gap = 16;
     const step = (frame?.offsetWidth ?? 200) + gap;
     track.scrollBy({ left: direction * step, behavior: "smooth" });
   };
 
   return (
-    <RoomShell room={room}>
-      <div className="relative -mx-5 sm:-mx-8 lg:mx-0">
-        {/* the cord the frames hang from */}
-        <div
-          aria-hidden="true"
-          className="pointer-events-none absolute inset-x-5 top-10 border-t border-dashed border-border sm:inset-x-8 lg:inset-x-0"
-        />
+    <section id="gallery" className="py-28 sm:py-40">
+      <div className="mx-auto max-w-[1400px] px-6 sm:px-12">
+        <SectionHead n="04" label="Off the clock">
+          Photographs, mostly of buildings looking up.
+        </SectionHead>
+      </div>
 
+      <div className="relative mt-16 lg:mt-24">
         <div
           ref={trackRef}
-          className="scrollbar-none flex gap-7 overflow-x-auto px-5 pt-10 pb-3 sm:px-8 lg:px-0"
+          className="scrollbar-none flex snap-x snap-mandatory scroll-px-6 gap-4 overflow-x-auto px-6 pb-2 sm:scroll-px-12 sm:px-12"
         >
           {PHOTOS.map((file, i) => (
             <button
               key={file}
               type="button"
               data-gallery-frame
-              onClick={() => openPaintingLightbox(file)}
+              onClick={() => openPhoto(file)}
               aria-label={`View photo ${i + 1} of ${PHOTOS.length}`}
-              className="group relative shrink-0"
+              className="group relative aspect-[4/5] w-[72vw] shrink-0 snap-start overflow-hidden bg-soft sm:w-[300px] lg:w-[340px]"
             >
-              <span
-                aria-hidden="true"
-                className="absolute -top-[26px] left-1/2 h-[26px] w-px -translate-x-1/2 bg-border"
+              {/* eslint-disable-next-line @next/next/no-img-element -- 640px web copy, static export */}
+              <img
+                src={`/gallery/paintings/${file}`}
+                alt=""
+                loading="lazy"
+                className="absolute inset-0 h-full w-full object-cover grayscale transition-[filter,transform] duration-[900ms] ease-[var(--ease-out)] group-hover:scale-[1.03] group-hover:grayscale-0 group-focus-visible:grayscale-0"
               />
-              <span
-                aria-hidden="true"
-                className="clay-pin absolute -top-[31px] left-1/2 -translate-x-1/2"
-              />
-              <div
-                className={cn(
-                  "clay-sm clay-interactive rounded-[var(--radius-md)] p-2",
-                  FRAMES[i % FRAMES.length],
-                )}
-              >
-                <div className="relative aspect-[4/5] w-[58vw] max-w-[220px] overflow-hidden rounded-[16px] sm:w-[190px]">
-                  {/* eslint-disable-next-line @next/next/no-img-element -- 640px pre-sized painting texture, static export */}
-                  <img
-                    src={`/gallery/paintings/${file}`}
-                    alt=""
-                    loading="lazy"
-                    className="gallery-img absolute inset-0 h-full w-full object-cover"
-                  />
-                </div>
-              </div>
+              <span className="label absolute bottom-4 left-4 text-white opacity-0 mix-blend-difference transition-opacity duration-500 group-hover:opacity-100">
+                {String(i + 1).padStart(2, "0")}
+              </span>
             </button>
           ))}
         </div>
 
-        <button
-          type="button"
-          onClick={() => scrollByOne(-1)}
-          disabled={!canScrollLeft}
-          aria-label="Scroll gallery left"
-          className="clay-sm clay-interactive absolute top-[calc(50%+20px)] left-1 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-card text-foreground disabled:pointer-events-none disabled:opacity-0 sm:left-3"
-        >
-          <ChevronLeft className="size-5" />
-        </button>
-        <button
-          type="button"
-          onClick={() => scrollByOne(1)}
-          disabled={!canScrollRight}
-          aria-label="Scroll gallery right"
-          className="clay-sm clay-interactive absolute top-[calc(50%+20px)] right-1 flex size-10 -translate-y-1/2 items-center justify-center rounded-full bg-card text-foreground disabled:pointer-events-none disabled:opacity-0 sm:right-3"
-        >
-          <ChevronRight className="size-5" />
-        </button>
+        {(["left", "right"] as const).map((side) => (
+          <button
+            key={side}
+            type="button"
+            onClick={() => scrollByOne(side === "left" ? -1 : 1)}
+            disabled={side === "left" ? !canScrollLeft : !canScrollRight}
+            aria-label={`Scroll gallery ${side}`}
+            className={`glass absolute top-1/2 hidden size-12 -translate-y-1/2 items-center justify-center rounded-full transition-opacity disabled:pointer-events-none disabled:opacity-0 sm:flex ${side === "left" ? "left-4" : "right-4"}`}
+          >
+            {side === "left" ? <ChevronLeft className="size-5" /> : <ChevronRight className="size-5" />}
+          </button>
+        ))}
       </div>
-    </RoomShell>
+    </section>
   );
 }

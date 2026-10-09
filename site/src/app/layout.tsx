@@ -1,10 +1,11 @@
 import type { Metadata, Viewport } from "next";
-import { Fraunces, Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Onest } from "next/font/google";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-sans",
+const onest = Onest({
+  variable: "--font-onest",
   subsets: ["latin"],
+  weight: ["300", "400", "500"],
 });
 
 const geistMono = Geist_Mono({
@@ -12,44 +13,25 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-const fraunces = Fraunces({
-  variable: "--font-display",
-  subsets: ["latin"],
-  axes: ["SOFT", "WONK", "opsz"],
-});
+const description =
+  "AI Engineer building agentic systems and clinical AI that knows when to stop and ask a human.";
 
 export const metadata: Metadata = {
   title: "Shashank Jamkhandi · AI Engineer",
-  description:
-    "AI Engineer building agentic systems and clinical AI that knows when to stop and ask a human. A claymorphic castle you can explore, room by room.",
-  openGraph: {
-    title: "Shashank Jamkhandi · AI Engineer",
-    description:
-      "AI Engineer building agentic systems and clinical AI that knows when to stop and ask a human.",
-    type: "website",
-  },
+  description,
+  openGraph: { title: "Shashank Jamkhandi · AI Engineer", description, type: "website" },
 };
 
 export const viewport: Viewport = {
-  themeColor: "#FBF7F1",
+  themeColor: "#ffffff",
   width: "device-width",
   initialScale: 1,
 };
 
-export default function RootLayout({
-  children,
-}: Readonly<{
-  children: React.ReactNode;
-}>) {
+export default function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html
-      lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} ${fraunces.variable} h-full antialiased`}
-    >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
-        <div className="paper-grain" aria-hidden="true" />
-        {children}
-      </body>
+    <html lang="en" className={`${onest.variable} ${geistMono.variable}`}>
+      <body>{children}</body>
     </html>
   );
 }

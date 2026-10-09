@@ -1,59 +1,44 @@
-import { ACCURACY_NOTE, ACTIVITIES, JOBS, ROOMS } from "@/lib/content";
-import { RoomShell } from "@/components/ui/room-shell";
-import { HallucinationGame } from "@/components/ui/hallucination-game";
-
-const room = ROOMS.find((r) => r.id === "experience")!;
+import { ACTIVITIES, JOBS } from "@/lib/content";
+import { SectionHead } from "@/components/ui/section-head";
 
 export function Experience() {
   return (
-    <RoomShell room={room}>
-      <div className="relative space-y-6 border-l border-border pl-6">
+    <section id="experience" className="mx-auto max-w-[1400px] px-6 py-28 sm:px-12 sm:py-40">
+      <SectionHead n="02" label="Experience">
+        Clinical AI by day, where a confident wrong answer is the bug that matters.
+      </SectionHead>
+
+      <ol className="mt-16 border-b border-line lg:mt-24">
         {JOBS.map((job) => (
-          <div key={job.company} className="relative">
-            <span
-              aria-hidden="true"
-              className="absolute top-2 -left-[29px] size-2.5 rounded-full bg-primary shadow-sm"
-            />
-            <div className="clay-sm rounded-[var(--radius-md)] bg-card p-5 sm:p-6">
-              <p className="font-mono text-[11px] tracking-wide text-muted-foreground uppercase">
-                {job.period}
-              </p>
-              <h3 className="mt-1 font-heading text-lg font-semibold tracking-tight">
-                {job.company}
-              </h3>
-              <p className="text-sm font-medium text-foreground">{job.role}</p>
-              <p className="mt-3 text-sm leading-relaxed text-muted-foreground">{job.desc}</p>
-              <ul className="mt-4 space-y-2">
-                {job.bullets.map((b, i) => (
-                  <li
-                    key={i}
-                    className="relative pl-4 text-sm leading-relaxed text-muted-foreground before:absolute before:left-0 before:text-primary before:content-['•']"
-                  >
+          <li key={job.company} className="reveal grid gap-6 border-t border-line py-12 lg:grid-cols-[1fr_2fr] lg:gap-24">
+            <div>
+              <p className="text-[clamp(24px,2.4vw,32px)] font-normal tracking-[-0.01em]">{job.company}</p>
+              <p className="mt-2 text-[16px]">{job.role}</p>
+              <p className="label mt-3 text-muted-foreground">{job.period}</p>
+            </div>
+            <div>
+              <p className="max-w-2xl text-[17px] leading-[1.75] text-foreground/85">{job.desc}</p>
+              <ul className="mt-8 space-y-4">
+                {job.bullets.map((b) => (
+                  <li key={b} className="relative max-w-2xl pl-6 text-[15px] leading-[1.7] text-muted-foreground">
+                    <span aria-hidden="true" className="absolute top-[0.8em] left-0 h-px w-3 bg-foreground/40" />
                     {b}
                   </li>
                 ))}
               </ul>
             </div>
-          </div>
+          </li>
         ))}
-      </div>
+      </ol>
 
-      <div className="grid gap-3 sm:grid-cols-2">
+      <ul className="mt-12 grid gap-8 sm:grid-cols-2 lg:ml-[33.3%] lg:pl-24">
         {ACTIVITIES.map((a) => (
-          <div key={a.org} className="clay-sm rounded-[var(--radius-md)] bg-card p-4">
-            <p className="font-heading text-sm font-semibold tracking-tight">{a.org}</p>
-            <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{a.desc}</p>
-          </div>
+          <li key={a.org} className="reveal">
+            <p className="text-[16px]">{a.org}</p>
+            <p className="mt-2 text-[15px] leading-relaxed text-muted-foreground">{a.desc}</p>
+          </li>
         ))}
-      </div>
-
-      <div className="space-y-3">
-        <p className="font-mono text-[11px] tracking-[0.16em] text-primary uppercase">
-          Second opinion
-        </p>
-        <p className="text-sm leading-relaxed text-muted-foreground">{ACCURACY_NOTE}</p>
-        <HallucinationGame />
-      </div>
-    </RoomShell>
+      </ul>
+    </section>
   );
 }

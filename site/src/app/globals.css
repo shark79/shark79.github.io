@@ -1,430 +1,94 @@
 @import "tailwindcss";
-@import "tw-animate-css";
-@import "shadcn/tailwind.css";
-
-/* Castle in the Clouds — light-only, claymorphic. No dark mode, no toggle. */
 
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
-  --font-mono: var(--font-geist-mono);
-  --font-heading: var(--font-display);
-
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-primary-soft: var(--primary-soft);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
-  --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
-
-  /* pastel clay fills */
-  --color-blush: var(--blush);
-  --color-apricot: var(--apricot);
-  --color-butter: var(--butter);
-  --color-cream: var(--cream);
-  --color-ink-orange: var(--ink-orange);
-
-  /* exact radii from the design spec, not a derived scale */
-  --radius-sm: 12px;
-  --radius-md: 20px;
-  --radius-lg: 28px;
-  --radius-xl: 34px;
+  --color-line: var(--line);
+  --color-soft: var(--soft);
+  --font-sans: var(--font-onest);
+  --font-mono: var(--font-geist-mono);
 }
 
+/* Monochrome: white page, near-black ink, one grey for secondary text. The
+   only colour on the site comes from the sky and the photographs. */
 :root {
-  --background: #fbf7f1;
-  --foreground: #1b1714;
-  --card: #fffcf7;
-  --card-foreground: #1b1714;
-  --popover: #fffcf7;
-  --popover-foreground: #1b1714;
-
-  --primary: #c4523f;
-  --primary-foreground: #fffdfb;
-  --primary-soft: #f3d2c8;
-
-  --secondary: #fff3df;
-  --secondary-foreground: #1b1714;
-  --muted: #f2ebdf;
-  --muted-foreground: #5f574f;
-  --accent: #f3d2c8;
-  --accent-foreground: #1b1714;
-  --destructive: #b23a2e;
-
-  --border: #ede3d6;
-  --input: #ede3d6;
-  --ring: #c4523f;
-
-  --blush: #f6b8ae;
-  --apricot: #f9cba0;
-  --butter: #fbe6a6;
-  --cream: #fff3df;
-  --ink-orange: #a8561a;
-
-  /* motion */
+  --background: #ffffff;
+  --foreground: #0d0e0f;
+  --muted-foreground: #5c6166; /* 6.3:1 on white */
+  --line: #e4e6e8;
+  --soft: #f4f5f6;
   --ease-out: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
-  --ease-spring: cubic-bezier(0.34, 1.56, 0.64, 1);
-  --dur-press: 160ms;
-  --dur-hover: 320ms;
-  --dur-reveal: 700ms;
 }
 
-@layer base {
-  * {
-    @apply border-border;
-  }
-  body {
-    @apply bg-background text-foreground;
-  }
-  html {
-    @apply font-sans;
-    color-scheme: light;
-  }
-  :focus-visible {
-    outline: 2px solid var(--primary);
-    outline-offset: 3px;
-    border-radius: var(--radius-sm);
-  }
+html {
+  scroll-behavior: smooth;
+  -webkit-text-size-adjust: 100%;
 }
 
-/* ---------------------------------------------------------------- clay --- */
-/* Soft, inflated, tactile surfaces. Outer shadow gives lift off the page;
-   inset highlight/shade gives the "clay" roundness. */
-
-.clay {
-  background: var(--card);
-  border-radius: var(--radius-lg);
-  box-shadow:
-    0 18px 40px -12px rgba(170, 110, 80, 0.28),
-    0 4px 10px -4px rgba(170, 110, 80, 0.18),
-    inset 0 2px 0 rgba(255, 255, 255, 0.9),
-    inset 6px 8px 16px rgba(255, 255, 255, 0.65),
-    inset -8px -10px 18px rgba(196, 130, 95, 0.14);
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: var(--font-onest), system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
 }
 
-.clay-sm {
-  background: var(--card);
-  border-radius: var(--radius-md);
-  box-shadow:
-    0 10px 22px -10px rgba(170, 110, 80, 0.26),
-    0 2px 6px -2px rgba(170, 110, 80, 0.16),
-    inset 0 1.5px 0 rgba(255, 255, 255, 0.9),
-    inset 4px 5px 10px rgba(255, 255, 255, 0.6),
-    inset -5px -6px 12px rgba(196, 130, 95, 0.12);
+::selection {
+  background: var(--foreground);
+  color: var(--background);
 }
 
-.clay-inset {
-  background: var(--muted);
-  border-radius: var(--radius-md);
-  box-shadow:
-    inset 0 3px 8px rgba(150, 100, 75, 0.16),
-    inset 0 -1px 0 rgba(255, 255, 255, 0.7);
+:focus-visible {
+  outline: 2px solid var(--foreground);
+  outline-offset: 3px;
+  border-radius: 4px;
 }
 
-.clay-pressed {
-  box-shadow:
-    inset 0 3px 8px rgba(150, 100, 75, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  transform: translateY(1px) scale(0.985);
+/* Small uppercase labels, widely tracked (Skyclinics-style). */
+.label {
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 11px;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
 }
 
-/* Interactive clay: press + lift, on buttons/cards/chips/tiles the visitor
-   can actually act on. Kept separate from plain .clay so static cards don't
-   fake a hover affordance they don't have. */
-.clay-interactive {
-  transition:
-    transform var(--dur-hover) var(--ease-out),
-    box-shadow var(--dur-hover) var(--ease-out);
+/* Frosted pill used by the nav over the sky. */
+.glass {
+  background: color-mix(in oklab, white 62%, transparent);
+  backdrop-filter: blur(14px) saturate(1.2);
+  -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  border: 1px solid color-mix(in oklab, white 70%, transparent);
 }
-.clay-interactive:hover {
-  transform: translateY(-3px);
-}
-.clay-interactive:active {
-  transition-duration: var(--dur-press);
-  box-shadow:
-    inset 0 3px 8px rgba(150, 100, 75, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.5);
-  transform: translateY(1px) scale(0.985);
-}
-
-/* Pastel clay fills: a soft top-left -> bottom-right gradient of the pastel,
-   text stays --foreground per the "pastels are fills, never text" rule. */
-.clay-blush {
-  background: linear-gradient(
-    135deg,
-    color-mix(in oklch, var(--blush), white 4%),
-    color-mix(in oklch, var(--blush), black 4%)
-  );
-}
-.clay-apricot {
-  background: linear-gradient(
-    135deg,
-    color-mix(in oklch, var(--apricot), white 4%),
-    color-mix(in oklch, var(--apricot), black 4%)
-  );
-}
-.clay-butter {
-  background: linear-gradient(
-    135deg,
-    color-mix(in oklch, var(--butter), white 4%),
-    color-mix(in oklch, var(--butter), black 4%)
-  );
-}
-.clay-cream {
-  background: linear-gradient(
-    135deg,
-    color-mix(in oklch, var(--cream), white 4%),
-    color-mix(in oklch, var(--cream), black 4%)
-  );
-}
-/* A gentle "that's not it" tint for a wrong quiz pick — never full destructive
-   red, this is a riddle, not a form error. */
-.clay-wrong {
-  background: color-mix(in oklch, var(--destructive) 10%, var(--card));
-}
-/* Solid primary fill for a clay element (a Tailwind bg-primary utility
-   can't win here: .clay/.clay-sm set their own background and are declared
-   later in this file than any Tailwind utility, so it always wins the
-   cascade). Use this class, never bg-primary, on a .clay/.clay-sm element. */
-.clay-primary {
-  background: linear-gradient(
-    135deg,
-    color-mix(in oklch, var(--primary), white 6%),
-    color-mix(in oklch, var(--primary), black 6%)
-  );
-}
-
-/* ------------------------------------------------------------- surface --- */
-/* Faint paper grain over the whole shot — world and UI both read as one
-   crafted, tactile diorama. Z-index scale for the page: canvas 0, grain 10,
-   room content 20, floating chrome (nav/room index/toasts) 50. */
-
-.paper-grain {
-  position: fixed;
-  inset: 0;
-  z-index: 10;
-  pointer-events: none;
-  opacity: 0.03;
-  mix-blend-mode: multiply;
-  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
-}
-
-/* A small clay tack, pinning a room plaque to the world like paper to cork. */
-.clay-pin {
-  width: 13px;
-  height: 13px;
-  border-radius: 999px;
-  background:
-    radial-gradient(circle at 35% 28%, rgba(255, 255, 255, 0.85), transparent 60%),
-    var(--primary);
-  box-shadow:
-    0 3px 6px rgba(150, 70, 50, 0.35),
-    inset 0 1px 1px rgba(255, 255, 255, 0.5);
-}
-
-/* --------------------------------------------------------- reveal-on-scroll */
-/* One rise + fade per section as it enters, staggered per child via
-   --reveal-i. Reduced motion turns this into an instant opacity swap. */
-
-.reveal {
-  opacity: 0;
-  transform: translateY(16px);
-  transition:
-    opacity var(--dur-reveal) var(--ease-out),
-    transform var(--dur-reveal) var(--ease-out);
-  transition-delay: calc(var(--reveal-i, 0) * 60ms);
-}
-.reveal.is-visible {
-  opacity: 1;
-  transform: translateY(0);
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .reveal {
-    transition: opacity 200ms linear;
-    transform: none;
-  }
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-  .clay-interactive:hover,
-  .clay-interactive:active {
-    transform: none;
-  }
-}
-
-/* ------------------------------------------------------------ utilities --- */
 
 .scrollbar-none {
   scrollbar-width: none;
-  -ms-overflow-style: none;
 }
 .scrollbar-none::-webkit-scrollbar {
   display: none;
 }
 
-/* Gallery photos: grayscale until hover on devices that support it; full
-   colour immediately on touch, where there is no "hover" to reward. */
-@media (hover: hover) and (pointer: fine) {
-  .gallery-img {
-    filter: grayscale(1) sepia(0.15);
-    transition:
-      filter var(--dur-hover) var(--ease-out),
-      transform var(--dur-hover) var(--ease-out);
-  }
-  .gallery-img:hover,
-  .gallery-img:focus-visible {
-    filter: grayscale(0) sepia(0);
-  }
+/* Fade + rise when an element enters the viewport (see useReveal). */
+.reveal {
+  opacity: 0;
+  transform: translateY(24px);
+  transition:
+    opacity 900ms var(--ease-out),
+    transform 900ms var(--ease-out);
+  transition-delay: calc(var(--i, 0) * 70ms);
+}
+.reveal.is-in {
+  opacity: 1;
+  transform: none;
 }
 
-/* ---- mini-games (seat race, spot the hallucination) ---- */
-
-@keyframes race-packet {
-  from {
-    left: 0.5rem;
-    opacity: 0;
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
   }
-  12% {
-    opacity: 1;
-  }
-  to {
-    left: calc(100% - 10.5rem);
-    opacity: 1;
-  }
-}
-.race-packet {
-  animation: race-packet cubic-bezier(0.4, 0, 0.2, 1) forwards;
-}
-
-@keyframes race-pop {
-  from {
-    opacity: 0;
-    transform: translateY(4px) scale(0.98);
-  }
-  to {
-    opacity: 1;
+  .reveal {
     transform: none;
-  }
-}
-.race-pop {
-  animation: race-pop 0.35s cubic-bezier(0.16, 1, 0.3, 1) both;
-}
-
-@keyframes race-shake {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  20% {
-    transform: translateX(-5px);
-  }
-  40% {
-    transform: translateX(5px);
-  }
-  60% {
-    transform: translateX(-3px);
-  }
-  80% {
-    transform: translateX(3px);
-  }
-}
-.race-shake {
-  animation: race-shake 0.45s ease-in-out;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .race-packet,
-  .race-pop,
-  .race-shake {
-    animation: none;
-  }
-  .race-packet {
-    opacity: 1;
-  }
-}
-
-/* ---- painting lightbox ---- */
-
-@keyframes lightbox-in {
-  from {
-    opacity: 0;
-    transform: scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-.lightbox-in {
-  animation: lightbox-in 380ms var(--ease-out) both;
-}
-
-/* ---- toasts ---- */
-
-@keyframes toast-in {
-  from {
-    opacity: 0;
-    transform: translate(-50%, 10px) scale(0.96);
-  }
-  to {
-    opacity: 1;
-    transform: translate(-50%, 0) scale(1);
-  }
-}
-.toast-in {
-  animation: toast-in 0.4s var(--ease-spring) both;
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .toast-in {
-    animation: none;
-  }
-}
-
-/* Soft cream haze behind a room's content column (see RoomShell). */
-.room-mist {
-  background: radial-gradient(
-    ellipse 70% 60% at 30% 45%,
-    color-mix(in oklab, var(--background) 92%, transparent) 0%,
-    color-mix(in oklab, var(--background) 70%, transparent) 45%,
-    transparent 78%
-  );
-}
-.room-mist-r {
-  background: radial-gradient(
-    ellipse 70% 60% at 70% 45%,
-    color-mix(in oklab, var(--background) 92%, transparent) 0%,
-    color-mix(in oklab, var(--background) 70%, transparent) 45%,
-    transparent 78%
-  );
-}
-@media (max-width: 1023px) {
-  .room-mist,
-  .room-mist-r {
-    background: linear-gradient(
-      to bottom,
-      transparent 0,
-      color-mix(in oklab, var(--background) 85%, transparent) 90px,
-      color-mix(in oklab, var(--background) 85%, transparent) 100%
-    );
+    transition: opacity 200ms linear;
   }
 }

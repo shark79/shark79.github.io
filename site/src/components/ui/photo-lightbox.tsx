@@ -4,18 +4,15 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ChevronLeft, ChevronRight, X } from "lucide-react";
 import { PHOTOS } from "@/lib/content";
 
-const EVENT = "castle:painting";
+const EVENT = "photo:open";
 
-/** Open the lightbox from anywhere — the 3D castle and the gallery rail both call this. */
-export function openPaintingLightbox(file: string) {
+/** Open the lightbox on a given photo. */
+export function openPhoto(file: string) {
   window.dispatchEvent(new CustomEvent<{ file: string }>(EVENT, { detail: { file } }));
 }
 
-/**
- * A single shared lightbox for every photo, whether it was tapped as a
- * framed painting in the 3D castle or in the flat gallery rail.
- */
-export function PaintingLightbox() {
+/** Full-size photo viewer: Esc / arrows / swipe, focus trapped and restored. */
+export function PhotoLightbox() {
   const [index, setIndex] = useState<number | null>(null);
   const closeBtnRef = useRef<HTMLButtonElement>(null);
   const dialogRef = useRef<HTMLDivElement>(null);
@@ -105,29 +102,27 @@ export function PaintingLightbox() {
       aria-label={`Photo ${index + 1} of ${PHOTOS.length}`}
       ref={dialogRef}
       onClick={close}
-      className="fixed inset-0 z-[60] flex items-center justify-center bg-[#1b1714]/70 p-5 backdrop-blur-sm"
+      className="fixed inset-0 z-[60] flex items-center justify-center bg-white/90 p-5 backdrop-blur-md"
     >
       <div
         onClick={(e) => e.stopPropagation()}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
-        className="lightbox-in relative max-w-[min(92vw,640px)]"
+        className="relative max-w-[min(92vw,720px)]"
       >
-        <div className="clay rounded-[var(--radius-lg)] bg-card p-3 sm:p-4">
-          {/* eslint-disable-next-line @next/next/no-img-element -- variable-aspect photo, static export, unoptimized images */}
-          <img
-            src={`/gallery/${file}`}
-            alt=""
-            className="max-h-[70svh] w-auto rounded-[var(--radius-md)] object-contain"
-          />
-        </div>
+        {/* eslint-disable-next-line @next/next/no-img-element -- variable-aspect photo, static export, unoptimized images */}
+        <img
+          src={`/gallery/${file}`}
+          alt=""
+          className="max-h-[78svh] w-auto object-contain shadow-[0_30px_80px_-30px_rgba(0,0,0,0.35)]"
+        />
 
         <button
           ref={closeBtnRef}
           type="button"
           onClick={close}
           aria-label="Close photo"
-          className="clay-sm clay-interactive absolute -top-3 -right-3 flex size-10 items-center justify-center rounded-full bg-card text-foreground"
+          className="absolute -top-12 right-0 flex size-11 items-center justify-center rounded-full text-foreground transition-opacity hover:opacity-60"
         >
           <X className="size-4" />
         </button>
@@ -136,7 +131,7 @@ export function PaintingLightbox() {
           type="button"
           onClick={() => step(-1)}
           aria-label="Previous photo"
-          className="clay-sm clay-interactive absolute top-1/2 -left-4 hidden size-11 -translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-card text-foreground sm:flex"
+          className="absolute top-1/2 -left-6 hidden size-11 -translate-x-full -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-opacity hover:opacity-60 sm:flex"
         >
           <ChevronLeft className="size-5" />
         </button>
@@ -144,12 +139,12 @@ export function PaintingLightbox() {
           type="button"
           onClick={() => step(1)}
           aria-label="Next photo"
-          className="clay-sm clay-interactive absolute top-1/2 -right-4 hidden size-11 translate-x-1/2 -translate-y-1/2 items-center justify-center rounded-full bg-card text-foreground sm:flex"
+          className="absolute top-1/2 -right-6 hidden size-11 translate-x-full -translate-y-1/2 items-center justify-center rounded-full text-foreground transition-opacity hover:opacity-60 sm:flex"
         >
           <ChevronRight className="size-5" />
         </button>
 
-        <p className="clay-sm mt-3 inline-flex rounded-full bg-card px-3 py-1 font-mono text-[11px] text-muted-foreground tabular-nums">
+        <p className="label mt-4 text-muted-foreground tabular-nums">
           {index + 1} / {PHOTOS.length}
         </p>
       </div>

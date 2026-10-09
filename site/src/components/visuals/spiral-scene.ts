@@ -112,8 +112,11 @@ export function createSpiral(canvas: HTMLCanvasElement, reducedMotion: boolean):
     const { clientWidth: w, clientHeight: h } = canvas;
     renderer.setSize(w, h, false);
     camera.aspect = w / h;
-    // Portrait screens: step back so the sweep still fits.
-    camera.position.z = w < h ? 22 : 15;
+    // Desktop: sit between the title column and the numbers. Portrait: step
+    // back and lift into the top of the stage, above the project text.
+    const portrait = w < h;
+    camera.position.z = portrait ? 22 : 18.5;
+    sculpture.position.set(portrait ? 0 : 0.5, portrait ? 1.6 : 0, 0);
     camera.updateProjectionMatrix();
   }
 

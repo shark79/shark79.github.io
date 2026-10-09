@@ -22,80 +22,7 @@ export const PROFILE = {
   source: "https://github.com/shark79/shark79.github.io",
 } as const;
 
-/* ------------------------------------------------------------------ rooms */
-
-/**
- * The castle's rooms. Each one is a door or window in the 3D hub and a
- * section on the page (`id` is the section's DOM id). Order = page order.
- */
-export const ROOMS = [
-  {
-    id: "about",
-    // Desktop screen side the 3D camera frames this opening on; cards go opposite.
-    side: "left",
-    n: "01",
-    place: "The Study",
-    label: "About me",
-    opening: "window", // left tower window
-    hint: "Who's behind the castle",
-  },
-  {
-    id: "work",
-    side: "right",
-    n: "02",
-    place: "The Workshop",
-    label: "Projects",
-    opening: "gate", // the main gate
-    hint: "Eleven things I've built",
-  },
-  {
-    id: "experience",
-    side: "left",
-    n: "03",
-    place: "The Hall",
-    label: "Experience",
-    opening: "window", // right tower window
-    hint: "Where I've worked",
-  },
-  {
-    id: "skills",
-    side: "right",
-    n: "04",
-    place: "The Tool Room",
-    label: "Skills",
-    opening: "balcony", // keep balcony
-    hint: "What I work with",
-  },
-  {
-    id: "gallery",
-    side: "left",
-    n: "05",
-    place: "The Gallery",
-    label: "Off the clock",
-    opening: "round-window", // round window high on the keep
-    hint: "Photos I've taken",
-  },
-  {
-    id: "contact",
-    side: "right",
-    n: "06",
-    place: "The Post Tower",
-    label: "Contact",
-    opening: "turret", // top turret, carrier-bird perch
-    hint: "Send a message up",
-  },
-] as const;
-
-export type RoomId = (typeof ROOMS)[number]["id"];
-
 /* --------------------------------------------------------------- projects */
-
-export type Quiz = {
-  question: string;
-  options: string[];
-  answer: number;
-  reveal: string;
-};
 
 export type Stat = { label: string; value: string };
 
@@ -111,10 +38,7 @@ export type Project = {
   whatItDoes: string;
   impact: string;
   whatILearned: string;
-  quiz: Quiz;
   stats: Stat[];
-  /** Has a playable mini-game rendered inside the card. */
-  game?: "seat-race";
 };
 
 const ALL_PROJECTS: Project[] = [
@@ -135,18 +59,6 @@ const ALL_PROJECTS: Project[] = [
       "The approval gates sit exactly where the money and the risk are: before image generation spends budget, and before anything goes out under a real brand's name. Publishing is switched off by default, and even when it's on, the publish tool is marked destructive so the system has to ask.",
     whatILearned:
       "The biggest risk in the project wasn't the AI, it was four social networks. Every connection had to be proven against test accounts before a live demo, because a demo that leans on someone else's service on a Saturday is a demo that can fail.",
-    quiz: {
-      question:
-        "The agents have written a post and it looks perfect. What has to happen before it goes live?",
-      options: [
-        "Nothing, it posts itself",
-        "A person approves that exact post",
-        "A second agent signs off",
-      ],
-      answer: 1,
-      reveal:
-        "A person approves that exact post, every time. Approving the campaign never quietly approves the posts, and publishing stays off until someone turns it on.",
-    },
     stats: [
       { label: "Networks drafted for", value: "3" },
       { label: "Human approval gates", value: "2" },
@@ -171,14 +83,6 @@ const ALL_PROJECTS: Project[] = [
       "Two rules are enforced in code, not asked for in a prompt. Any citation pointing at a page the search never actually returned is thrown out. And an agent that files ten findings doesn't get ten times the say: every agent carries the same total weight, so being loud dilutes you.",
     whatILearned:
       "A prompt that says \"please cite real sources\" is a wish. A check that compares every link against what the search actually returned is a guarantee. I also learned to show the cost before spending it: the app estimates every run and asks first.",
-    quiz: {
-      question:
-        "One agent files ten findings, another files one. Whose voice counts for more in the result?",
-      options: ["The one with ten", "They count the same", "Whoever cites more links"],
-      answer: 1,
-      reveal:
-        "The same. Every agent carries equal total weight, so ten findings are worth a tenth each. A press release republished by eight outlets doesn't count as eight sources either.",
-    },
     stats: [
       { label: "Research agents", value: "4" },
       { label: "Invented citations kept", value: "0" },
@@ -206,21 +110,12 @@ const ALL_PROJECTS: Project[] = [
       "Each of those four failures has an automated test that actually causes it, racing two real requests against each other and killing the process mid-payment, then checks the system still landed in the right state. That matters more now that AI agents call backends directly: an agent retries anything ambiguous and fires parallel calls far more often than a person clicking a button.",
     whatILearned:
       "Correctness is much cheaper when it comes from the architecture than when it depends on someone remembering to add a lock everywhere it's needed. Also, watching a real interface render inside a chat feels genuinely different from watching an AI describe one.",
-    quiz: {
-      question:
-        "Two buyers tap reserve on the same seat in the same millisecond. How many of them get it?",
-      options: ["Exactly one, always", "One, usually", "Both, sometimes"],
-      answer: 0,
-      reveal:
-        "Exactly one. Every seat is its own durable actor, so changes queue up and each one re-checks the real current state before it commits. There's no gap for the second request to slip through.",
-    },
     stats: [
       { label: "Failure modes survived", value: "4" },
       { label: "Tests that cause them", value: "4" },
       { label: "Front ends, one backend", value: "2" },
       { label: "Hand-written locks", value: "0" },
     ],
-    game: "seat-race",
   },
   {
     id: "jobfinder",
@@ -240,14 +135,6 @@ const ALL_PROJECTS: Project[] = [
       "It's published on npm, so anyone can run it with a single command. The part I'm proudest of is the guardrail: the agent physically can't send an email, because the send tool was never handed to it. It can only create drafts you read first.",
     whatILearned:
       "Deciding what an agent isn't allowed to do mattered more than what it can do. Taking the send capability away entirely is a much stronger promise than a prompt asking the model not to send.",
-    quiz: {
-      question:
-        "The agent writes personalized outreach emails. How many can it send on its own?",
-      options: ["Unlimited", "One per day", "Zero"],
-      answer: 2,
-      reveal:
-        "Zero. The send tool was never on its permitted list, only create-draft. It's a structural limit, not an instruction it could talk itself out of.",
-    },
     stats: [
       { label: "Job boards queried live", value: "3" },
       { label: "Emails it can send", value: "0" },
@@ -272,14 +159,6 @@ const ALL_PROJECTS: Project[] = [
       "The whole build cost $11.56 in model spend, across 27.5 million tokens and 340 requests, on open-weight models rather than expensive frontier ones. An 88% cache hit rate did most of that work. The point isn't the price: the checkpoints, tests, and security pass are what made cheaper models good enough to trust.",
     whatILearned:
       "Agents are fine at writing code. What they're bad at is knowing when to stop. Nearly all my effort went into the rules around them: who can close a defect, when the orchestrator has to ask a human, and what actually counts as proof that something works.",
-    quiz: {
-      question:
-        "Five agents planned, built, tested, and attacked a working app. What did the whole build cost in model spend?",
-      options: ["$11.56", "$115", "$1,150"],
-      answer: 0,
-      reveal:
-        "$11.56 for 27.5M tokens. Open-weight models via OpenRouter, an 88.2% cache hit rate, and a blended $0.42 per million tokens.",
-    },
     stats: [
       { label: "Total model spend", value: "$11.56" },
       { label: "Tokens", value: "27.5M" },
@@ -301,14 +180,6 @@ const ALL_PROJECTS: Project[] = [
       "Most serious AI products will need this shape eventually: several focused agents instead of one giant prompt. It also pushed me to learn a very new part of AWS before most people had touched it.",
     whatILearned:
       "Multi-agent systems break differently from single-agent ones. Getting agents to hand off cleanly and stay in their own lane took more design than the AI logic did.",
-    quiz: {
-      question:
-        "In a multi-agent system, which part breaks first once you move past the demo?",
-      options: ["The AI reasoning itself", "The handoffs between agents", "The cloud bill"],
-      answer: 1,
-      reveal:
-        "The handoffs. Each agent works fine alone. Getting them to pass work cleanly and stay in their own lane took more design than the AI logic did.",
-    },
     stats: [
       { label: "Agents sharing the task", value: "4" },
       { label: "One giant prompt", value: "0" },
@@ -331,13 +202,6 @@ const ALL_PROJECTS: Project[] = [
       "My first hands-on comparison of the model providers I now use every day, and a big part of why moving between models in production later felt routine instead of risky.",
     whatILearned:
       "Keeping the model swappable behind one small interface costs almost nothing on day one and saves you on day three hundred.",
-    quiz: {
-      question: "Which of the three versions never sends the page anywhere?",
-      options: ["OpenAI GPT-4", "Llama 3 via Ollama", "Claude on Bedrock"],
-      answer: 1,
-      reveal:
-        "The Ollama one. Llama 3 runs locally, so the page and the summary never leave the machine. Same pipeline, zero cloud.",
-    },
     stats: [
       { label: "Model providers", value: "3" },
       { label: "Runs fully offline", value: "1" },
@@ -360,14 +224,6 @@ const ALL_PROJECTS: Project[] = [
       "Most plagiarism tools only check for copied text, which paraphrasing tools get around easily. Style is a lot harder to fake.",
     whatILearned:
       "Catching real inconsistencies without flagging normal variation was the hardest part. People's writing shifts more than you'd expect, even within the same week.",
-    quiz: {
-      question:
-        "How many separate features of someone's writing does it compare to spot a mismatch?",
-      options: ["3", "10", "100"],
-      answer: 1,
-      reveal:
-        "Ten, from sentence length to punctuation habits. Enough to catch a real mismatch, few enough to explain to a person why something got flagged.",
-    },
     stats: [
       { label: "Style features compared", value: "10" },
       { label: "Text it needs copied", value: "0" },
@@ -389,14 +245,6 @@ const ALL_PROJECTS: Project[] = [
       "Built in 36 hours at ASU's GenAI hackathon and picked for the showcase demos. Small tool, genuinely annoying problem: nobody wants to compare a job description against a course catalog by hand.",
     whatILearned:
       "Scraping live data is messier than any tutorial admits. I spent more time on broken page layouts and rate limits than on the matching logic.",
-    quiz: {
-      question:
-        "Empty repo to showcase demo at ASU's GenAI hackathon. How long did it take?",
-      options: ["36 hours", "2 weeks", "3 months"],
-      answer: 0,
-      reveal:
-        "36 hours. Most of it went on scraping live job and course pages that kept changing shape, not on the matching logic.",
-    },
     stats: [
       { label: "Empty repo to demo", value: "36h" },
       { label: "Picked for showcase", value: "Yes" },
@@ -419,14 +267,6 @@ const ALL_PROJECTS: Project[] = [
       "Built for a responsible-AI program at ASU and used in a classroom activity where students budgeted their own energy mix. It turns \"AI uses a lot of energy\" from a headline into a tradeoff you have to make yourself.",
     whatILearned:
       "People remember a decision they made far better than a number they read. The interactive part mattered more than perfect data.",
-    quiz: {
-      question:
-        "Students got a budget and six power sources. What were they really trading off?",
-      options: ["Cost against emissions", "Speed against accuracy", "Storage against bandwidth"],
-      answer: 0,
-      reveal:
-        "Cost against emissions and waste. The cheapest mix is rarely the cleanest, and the simulator makes you feel that instead of just read it.",
-    },
     stats: [
       { label: "Energy sources", value: "6" },
       { label: "Real data from", value: "2023" },
@@ -448,13 +288,6 @@ const ALL_PROJECTS: Project[] = [
       "That kind of finding changes where a company puts its resources. Instead of spreading fixes evenly, the team could focus on the one region causing most of the pain, with dashboards to track it going forward.",
     whatILearned:
       "The best insights often sit in data nobody sliced the right way. Not a complicated model, just the right question asked of the right data.",
-    quiz: {
-      question: "One market region was responsible for what share of every repeat support call?",
-      options: ["12%", "38%", "62%"],
-      answer: 2,
-      reveal:
-        "62%, from one region. Nothing clever in the model, just slicing the data by a dimension nobody had tried.",
-    },
     stats: [
       { label: "Repeat calls, one region", value: "62%" },
       { label: "Regions analysed", value: "8" },
@@ -477,15 +310,6 @@ export const ABOUT = [
   "Right now I'm an AI Developer at DocAide.ai, doing the most demanding work of my career: clinical AI, where mistakes aren't an option and speed matters as much as accuracy. Shipping FastAPI services, orchestrating LLMs, and leading a production move from GPT-4o to Claude on AWS Bedrock has taught me more than any side project could.",
   "Healthcare is where I am today. Finance, gaming, and design are where I'd like to take the same ideas next: systems that scale and are built responsibly. Still learning as I go, just quicker than I used to.",
 ];
-
-export const ABOUT_QUIZ: Quiz = {
-  question:
-    "I cut the time to generate a clinical note from about 40 seconds to 15. What did that take?",
-  options: ["A bigger model", "Running steps in parallel", "Caching the answers"],
-  answer: 1,
-  reveal:
-    "Backend steps that were running one after another had no reason to. Running them at the same time did it. No new model, no cache, nothing that could go stale and hand a clinician the wrong note.",
-};
 
 export const STATS: Stat[] = [
   { label: "Master's GPA, ASU", value: "4.0" },
@@ -548,10 +372,6 @@ export const ACTIVITIES = [
   },
 ];
 
-/** Read-alongside for the "spot the confident wrong answer" game. */
-export const ACCURACY_NOTE =
-  "The bug that matters most in clinical AI isn't a crash, it's a confident wrong answer: an invented symptom, a stale date, a medication list that quietly drops two prescriptions. All three happened in production and all three were root-caused and fixed.";
-
 /* ----------------------------------------------------------------- skills */
 
 export const SKILLS = [
@@ -598,29 +418,3 @@ export const PHOTOS = [
   "IMG_4732.jpg",
 ];
 
-/**
- * The same photos hung as framed paintings inside the castle's interiors.
- * `src` is a 640px-max web copy (public/gallery/paintings/) sized for WebGL
- * textures — the full photo is `/gallery/<file>` for the lightbox. Frames
- * must match `w`/`h` so nothing is cropped or stretched.
- */
-export const PAINTINGS: {
-  file: string;
-  w: number;
-  h: number;
-  room: RoomId;
-}[] = [
-  { file: "IMG_0148.jpg", w: 575, h: 640, room: "about" },
-  { file: "IMG_1234.jpg", w: 461, h: 640, room: "about" },
-  { file: "IMG_0369.jpg", w: 640, h: 480, room: "experience" },
-  { file: "IMG_0158.jpg", w: 378, h: 640, room: "experience" },
-  { file: "IMG_0150.jpg", w: 480, h: 640, room: "gallery" },
-  { file: "IMG_0161.jpg", w: 640, h: 520, room: "gallery" },
-  { file: "IMG_0170.jpg", w: 640, h: 595, room: "gallery" },
-  { file: "IMG_0249.jpg", w: 640, h: 441, room: "gallery" },
-  { file: "IMG_0722.jpg", w: 640, h: 512, room: "gallery" },
-  { file: "IMG_1369.jpg", w: 438, h: 640, room: "gallery" },
-  { file: "IMG_2609.jpg", w: 640, h: 480, room: "gallery" },
-  { file: "IMG_3560.jpg", w: 640, h: 545, room: "gallery" },
-  { file: "IMG_4732.jpg", w: 640, h: 480, room: "gallery" },
-];

@@ -1,30 +1,24 @@
-import { ROOMS, SKILLS } from "@/lib/content";
-import { RoomShell } from "@/components/ui/room-shell";
-
-const room = ROOMS.find((r) => r.id === "skills")!;
+import { SKILLS } from "@/lib/content";
+import { SectionHead } from "@/components/ui/section-head";
 
 export function Skills() {
   return (
-    <RoomShell room={room}>
-      <div className="space-y-8">
-        {SKILLS.map((cat) => (
-          <div key={cat.name} className="clay-sm rounded-[var(--radius-md)] bg-card p-5 sm:p-6">
-            <p className="mb-4 font-mono text-[11px] font-medium tracking-[0.18em] text-primary uppercase">
-              {cat.name}
-            </p>
-            <div className="flex flex-wrap gap-2">
+    <section id="skills" className="mx-auto max-w-[1400px] px-6 py-28 sm:px-12 sm:py-40">
+      <SectionHead n="03" label="Toolkit">
+        What I reach for.
+      </SectionHead>
+      <div className="mt-16 grid gap-x-10 gap-y-14 sm:grid-cols-2 lg:mt-24 lg:grid-cols-4">
+        {SKILLS.map((cat, i) => (
+          <div key={cat.name} className="reveal border-t border-line pt-6" style={{ "--i": i } as React.CSSProperties}>
+            <h3 className="label">{cat.name}</h3>
+            <ul className="mt-6 space-y-2.5 text-[15px] text-muted-foreground">
               {cat.skills.map((s) => (
-                <span
-                  key={s}
-                  className="clay-sm clay-interactive rounded-full bg-card px-3.5 py-2 text-xs text-foreground"
-                >
-                  {s}
-                </span>
+                <li key={s}>{s}</li>
               ))}
-            </div>
+            </ul>
           </div>
         ))}
       </div>
-    </RoomShell>
+    </section>
   );
 }

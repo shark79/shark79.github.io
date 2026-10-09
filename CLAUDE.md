@@ -18,9 +18,9 @@ captures standing instructions so they don't need to be repeated on every design
 - **75% professional / 25% personal.** Projects and experience should read simple, clear, and
   scannable — not jargon-heavy or "boasting." Prioritize clarity over technical depth; a non-technical
   visitor should understand what a project *does* and *why it matters* in one glance.
-- Photography lives in the **Gallery** section (`site/public/gallery/`) as a horizontally scrollable,
-  softly desaturated showreel in clay frames (full color on hover/focus) — sits inside the warm
-  light palette rather than competing with it. Keep new photos web-sized (~1600px, compressed) before adding.
+- Photography lives in the **Gallery** section (`site/public/gallery/`, 640px web copies in
+  `gallery/paintings/`) as a horizontally scrollable grayscale showreel (full color on hover/focus)
+  with a full-size lightbox. Keep new photos web-sized (~1600px, compressed) before adding.
 - The overall feel should read as **art you interact with** — motion, easing, and hover/scroll
   responses should feel considered and premium, not like generic template animation. A deliberate
   wit/personality moment is welcome in the hero (currently "AI that helps. And knows when not to." —
@@ -41,7 +41,7 @@ captures standing instructions so they don't need to be repeated on every design
 
 ## Architecture
 
-- **Next.js (App Router) + TypeScript + Tailwind CSS + shadcn**, statically exported
+- **Next.js (App Router) + TypeScript + Tailwind CSS + three.js**, statically exported
   (`output: "export"` in `next.config.ts`) and deployed to GitHub Pages via a GitHub Actions
   workflow (`.github/workflows/deploy.yml`) — Pages is configured for `build_type: workflow`, not
   branch-based deploy. Source lives entirely under `site/`.
@@ -49,24 +49,21 @@ captures standing instructions so they don't need to be repeated on every design
   explicitly before proceeding, per the flag-before-migrating rule below) — it now carries genuine
   build tooling and npm dependency maintenance that the static version didn't have. That tradeoff
   was made deliberately; don't revert to vanilla without the same kind of explicit sign-off.
-- **Concept: "Castle in the Clouds"** (full spec in `docs/DESIGN.md`). The hero is a procedural
-  three.js claymorphic castle (`site/src/components/castle/`, vanilla three, lazy-loaded, no model
-  or texture files); each door/window is a room = a page section (`ROOMS` in `content.ts`). Visiting
-  rooms lights windows; solving puzzles earns keys (`site/src/lib/progress.ts`). Games reward
-  curiosity and never gate content.
+- **Design: monochrome editorial + two live three.js visuals** (full spec in `docs/DESIGN.md`):
+  a procedural cloud-sky shader hero (Skyclinics reference) and a white slatted spiral sculpture
+  that turns with scroll while the projects transition around it (AIR reference). Both are code,
+  not video — never lift media from reference sites. The castle direction was retired by the owner
+  (Oct 2026); don't bring it back.
 - **All copy lives in `site/src/lib/content.ts`.** Projects carry an ISO `start` and are sorted
   newest-first in code — add a project there with its date, never hand-order the list.
-- Components follow the shadcn convention: shared/reusable primitives in `site/src/components/ui/`,
-  page sections (rooms) in `site/src/components/sections/`, one section per file, composed in
+- Page sections live in `site/src/components/sections/` (one per file), visuals in
+  `site/src/components/visuals/`, small shared pieces in `site/src/components/ui/`, composed in
   `site/src/app/page.tsx`.
-- Theme: **light only, claymorphism** — soft warm white (`#FBF7F1`), pastel blush / apricot / butter
-  as *fills*, near-black text, one deep terracotta accent (`--primary`) spent deliberately (primary
-  buttons, active states, headline accent word). No dark mode, no neon, no saturated jumps. Tokens
-  and the `.clay*` utilities are defined once in `site/src/app/globals.css`; components consume
-  tokens (`bg-background`, `text-foreground`, `bg-blush`, …) — never hardcode a hex color in a
-  component when a token exists (the 3D scene's material colors are the one exception).
-- Type: **Fraunces** (display, `--font-display`), **Geist Sans** (body), **Geist Mono**
-  (labels) — all via `next/font/google`, self-hosted at build time. No font CDN `<link>` tags.
+- Theme: **light, monochrome** — white page, near-black ink, one grey (`--muted-foreground`);
+  the only colour comes from the sky and the photos. Tokens defined once in
+  `site/src/app/globals.css`; no hardcoded hex in components when a token exists.
+- Type: **Onest** (300/400/500) and **Geist Mono** (the `.label` small caps) via
+  `next/font/google`, self-hosted at build time. No font CDN `<link>` tags.
 - **Flag before migrating further**: if a future change would require introducing another framework,
   a different component library, a new build tool, or a paid service, flag the tradeoff explicitly
   and get sign-off before doing it — don't silently swap architecture again.

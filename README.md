@@ -1,7 +1,7 @@
 # shark79.github.io
 
-Personal portfolio for **Shashank Jamkhandi**, AI Engineer: a claymorphic castle floating in
-the clouds, where every door and window opens onto a room of the resume.
+Personal portfolio for **Shashank Jamkhandi**, AI Engineer: a live cloud sky, then a white
+spiral sculpture that turns as eleven projects hand over one to the next.
 
 🌐 **Live site:** [shark79.github.io](https://shark79.github.io)
 
@@ -9,23 +9,19 @@ the clouds, where every door and window opens onto a room of the resume.
 
 ## About
 
-Most visitors arrive by scanning a QR code at a conference, on a phone, knowing nothing about
-me. The site is meant to be something you play with first and read as a resume second.
+Most visitors arrive by scanning a QR code at a conference, on a phone. The site is meant to
+read in a minute and feel like an object worth scrolling.
 
-- **The castle** is a procedural three.js scene (no model or texture files) that stays fixed
-  behind the page. As you scroll, the camera moves from door to door. Each room's door opens
-  when you reach it, and its window stays lit afterwards.
-- **Rooms** (page sections): The Study (about), The Workshop (projects), The Hall
-  (experience), The Tool Room (skills), The Gallery (photos, also hung as paintings inside
-  the castle), The Post Tower (contact).
-- **Keys**: each project asks one "make the call" question, and there are two mini-games
-  (Seat race, Second opinion). Games are optional and never lock content.
-- **Look**: light only. Soft warm white with pastel blush / apricot / butter clay fills,
-  near-black text, one terracotta accent. Fonts: Fraunces, Geist Sans and Geist Mono via
-  `next/font` (self-hosted at build time).
+- **Hero**: a procedural cloud shader (three.js, no video or image files) behind thin,
+  wide-tracked type.
+- **Work**: a pinned, scroll-driven scene. A white slatted spiral, built from 210 instanced
+  slats, turns while each project transitions in with its numbers and stack.
+- **About, Experience, Toolkit, Gallery, Contact**: monochrome editorial sections. The
+  gallery is a grayscale showreel with a full-size lightbox.
 
 Built with **Next.js (App Router) + TypeScript + Tailwind CSS v4 + three.js**, statically
-exported and deployed to GitHub Pages. Full design spec: [`docs/DESIGN.md`](docs/DESIGN.md).
+exported and deployed to GitHub Pages. Fonts: Onest and Geist Mono via `next/font`. Design
+notes: [`docs/DESIGN.md`](docs/DESIGN.md).
 
 ## Local development
 
@@ -53,11 +49,10 @@ date. The list is sorted newest-first in code, so never hand-order it.
 
 ```
 site/src/
-  app/                  layout, page, globals.css (tokens + .clay utilities)
-  components/castle/    three.js castle world, camera, interiors, loader, hero overlay
-  components/sections/  one file per room
-  components/ui/        shared primitives (room shell, quiz card, toasts, lightbox, …)
+  app/                  layout, page, globals.css (tokens)
+  components/sections/  hero, work, about, experience, skills, gallery, contact
+  components/visuals/   cloud-scene.ts, spiral-scene.ts, use-scene.ts (lazy three.js)
+  components/ui/        section head, reveal observer, photo lightbox
   lib/content.ts        every word on the site
-  lib/progress.ts       rooms visited + keys earned (saved in localStorage)
-site/public/gallery/    photos (+ paintings/: 640px copies used as 3D textures)
+site/public/gallery/    photos (+ paintings/: 640px web copies used in the showreel)
 ```
