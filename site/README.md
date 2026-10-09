@@ -20,7 +20,9 @@ All copy lives in `src/lib/content.ts`. Projects are sorted by their ISO `start`
 date. Client visuals lazy-load through `use-scene.ts`: a volumetric sky, dense
 foreground clouds filling the hero with a clearing over the real heading, and a scroll-driven
 slat spiral with translucent white glass behind the project copy and stats.
-The sky-to-work handoff shares scroll geometry through `sky-progress.ts`.
+The sky-to-work handoff shares scroll geometry through `sky-progress.ts`: clouds clear
+the letters early in the scroll, while the spiral's sticky visual extends behind the hero
+and leaves with the last project. Feathered cloud/canvas edges avoid a section-sized cut.
 
 Before shipping visual changes, check the static export in Chromium at desktop
 1440×900 and phone 390×844 (DPR 2), with `--use-gl=angle --ignore-gpu-blocklist`.

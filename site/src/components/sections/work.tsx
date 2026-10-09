@@ -16,7 +16,7 @@ const STEP_VH = 135;
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /**
- * The projects as one pinned scene: the spiral sits in a sticky stage and
+ * The projects as one pinned scene: the spiral shares the hero's sky and
  * turns with scroll, while the projects hand over to one another around it.
  * Every slide stays in the DOM (screen readers read them all); focusing a
  * link inside one scrolls the story to that slide.
@@ -68,7 +68,7 @@ export function Work() {
       ref={sectionRef}
       aria-label="Selected work"
       style={{ height: `calc(${N * STEP_VH}vh + 100vh)` }}
-      className="relative z-10"
+      className="relative z-[5]"
     >
       {/* One soft snap point at the middle of each project's stretch: if a
           scroll stops between projects, the page settles on the nearer one. */}
@@ -81,13 +81,15 @@ export function Work() {
         />
       ))}
 
-      <div className="sticky top-0 h-svh overflow-hidden">
-        <canvas
-          ref={canvasRef}
-          aria-hidden="true"
-          className="absolute inset-0 h-full w-full max-sm:h-[62%]"
-        />
+      {/* Start the visual at the hero's top, so its canvas never gets clipped
+          at the hero/work boundary. It still leaves with the last project. */}
+      <div aria-hidden="true" className="work-sky-stage pointer-events-none absolute inset-x-0 bottom-0">
+        <div className="sticky top-0 h-svh">
+          <canvas ref={canvasRef} className="spiral-canvas absolute inset-0 h-full w-full max-sm:h-[62%]" />
+        </div>
+      </div>
 
+      <div className="sticky top-0 h-svh overflow-hidden">
         {/* Phones: one shared wash under the text (per-slide washes would stack
             over the active slide, since later slides paint on top). */}
         <div
