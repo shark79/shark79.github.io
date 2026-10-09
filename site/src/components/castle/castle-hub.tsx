@@ -100,9 +100,11 @@ export function CastleHub() {
           onPointerDown={onHeroDown}
         />
 
-        {/* Mobile-only legibility scrim: the castle sits directly behind this copy at
-            small widths, so it needs a soft cream fade behind the text, not just contrast. */}
-        <div className="pointer-events-none absolute inset-x-0 top-0 z-[5] h-[78%] bg-gradient-to-b from-background/96 via-background/80 to-transparent sm:hidden" />
+        {/* Mobile-only legibility scrim: short and only behind the copy block —
+            the castle below (roofline starts ~50% down, see the mobile camera
+            keyframe in castle-camera.ts) must stay crisp and clearly the hero,
+            not washed out under a nearly-opaque, nearly-full-height fade. */}
+        <div className="pointer-events-none absolute inset-x-0 top-0 z-[5] h-[55%] bg-gradient-to-b from-background/85 via-background/55 to-transparent sm:hidden" />
 
         <div className="relative z-10 pointer-events-none max-w-3xl">
           <p className="font-mono text-[11px] tracking-[0.18em] text-muted-foreground uppercase">{PROFILE.eyebrow}</p>

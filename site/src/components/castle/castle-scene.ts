@@ -147,17 +147,38 @@ export class CastleScene {
   updateVisited(rooms: RoomId[]) {
     const isFirst = !this.sawFirstVisitedUpdate;
     this.sawFirstVisitedUpdate = true;
+    const wasComplete = this.visited.size >= ROOMS.length;
     this.visited = new Set(rooms);
     const complete = rooms.length >= ROOMS.length;
     if (complete && !this.everComplete) {
       this.everComplete = true;
       this.pennantRaised = true;
+      const baseY = this.assembly.pennant.userData.baseY as number;
       if (isFirst || this.reducedMotion) {
-        this.assembly.pennant.position.y = 0;
+        this.assembly.pennant.position.y = baseY + 1.1;
       } else {
         this.spawnConfetti();
       }
+    } else if (!complete && wasComplete) {
+      // "Explore again" (progress reset to empty/partial): drop the pennant
+      // and re-arm the celebration so completing again replays it.
+      this.everComplete = false;
+      this.pennantRaised = false;
     }
+  }
+
+  /** The room whose DOM section currently covers the vertical middle of the viewport
+   * (breakpoints[0] is the hero top; breakpoints[i] for i>=1 is ROOMS[i-1]'s section top). */
+  private computeActiveRoomId(): RoomId | null {
+    const bp = this.breakpoints;
+    if (bp.length < 2) return null;
+    const mid = this.scrollY + window.innerHeight / 2;
+    if (mid < bp[1]) return null;
+    for (let i = 1; i < bp.length; i++) {
+      const end = i + 1 < bp.length ? bp[i + 1] : Infinity;
+      if (mid >= bp[i] && mid < end) return ROOMS[i - 1].id;
+    }
+    return ROOMS[ROOMS.length - 1].id;
   }
 
   private spawnConfetti() {
@@ -218,7 +239,12 @@ export class CastleScene {
     this.camera.position.copy(this.camPos).add(this.parallax);
     this.camera.lookAt(this.lookAt);
 
-    const nextActive = target.t > 0.15 ? ROOMS[Math.min(target.segmentIndex, ROOMS.length - 1)].id : null;
+    // Which room is "active" (for the painting hit-band + lit-window preview)
+    // is a question about what's on screen, not about where the camera is
+    // flying — those diverge for the whole gallery hall pan, where the camera
+    // is mid-flight toward contact while the gallery section is still the one
+    // in view. Derive it from the actual section under the viewport middle.
+    const nextActive = this.computeActiveRoomId();
     if (nextActive !== this.activeRoom) {
       this.activeRoom = nextActive;
       this.onActiveRoomChange?.(nextActive);
@@ -272,7 +298,16 @@ export class CastleScene {
     if (!this.reducedMotion) this.updateAmbient(dt, tSec);
     this.updateConfetti(dt);
 
-    this.assembly.pennant.position.y = THREE.MathUtils.lerp(this.assembly.pennant.position.y, this.pennantRaised ? 0 : -1.1, this.reducedMotion ? 1 : 1 - Math.exp(-2.2 * dt));
+    // Relative to the pennant's own base (its resting spot tucked below the turret
+    // roofline), not an absolute world Y — an absolute 0/-1.1 here clobbered the
+    // turret-top height and buried the pennant (and confetti spawned from it)
+    // down inside the keep.
+    const pennantBaseY = this.assembly.pennant.userData.baseY as number;
+    this.assembly.pennant.position.y = THREE.MathUtils.lerp(
+      this.assembly.pennant.position.y,
+      pennantBaseY + (this.pennantRaised ? 1.1 : 0),
+      this.reducedMotion ? 1 : 1 - Math.exp(-2.2 * dt),
+    );
     if (!this.reducedMotion && this.pennantRaised) {
       const flag = this.assembly.pennant.userData.flag as THREE.Mesh;
       flag.rotation.z = Math.sin(tSec * 6) * 0.1;

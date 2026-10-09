@@ -91,6 +91,18 @@ function mesh(geo: THREE.BufferGeometry, color: number, opts?: Parameters<typeof
   return m;
 }
 
+/** Turns off shadow-casting for every mesh in a small/background/decorative prop —
+ * the shadow map draw pass roughly doubles the draw-call cost of anything that
+ * casts, and these are small enough (or far enough, or numerous enough) that the
+ * self-shadow they'd contribute isn't worth that budget. Structural pieces (walls,
+ * roofs, door leaves) keep their shadows. */
+function noCastShadow(g: THREE.Object3D): THREE.Object3D {
+  g.traverse((o) => {
+    if ((o as THREE.Mesh).isMesh) (o as THREE.Mesh).castShadow = false;
+  });
+  return g;
+}
+
 /* ------------------------------------------------------------- island & roofs */
 
 /** A rounded-top mesa that tapers to a point underneath — the classic floating island trick. */
@@ -361,9 +373,13 @@ export function buildFlowerBox(width: number) {
 }
 
 let puffGeo: THREE.SphereGeometry | null = null;
-/** Shared smooth-sphere puff geometry (20x14 segments — genuinely round, not faceted). */
+/** Shared smooth-sphere puff geometry. 10x7 is ~120 triangles each — with ~80
+ * puffs total across the sky field and both skirts, 20x14 (~520 each) alone
+ * was ~40k triangles, most of the whole scene's triangle budget. At the small
+ * screen size these render (tight clusters, mostly backgrounded by fog), the
+ * extra segments were not buying visible roundness. */
 function cloudPuffGeometry() {
-  puffGeo ??= new THREE.SphereGeometry(1, 20, 14);
+  puffGeo ??= new THREE.SphereGeometry(1, 10, 7);
   return puffGeo;
 }
 
@@ -410,7 +426,9 @@ export function buildCloudSkirt(count: number, radius: number, y: number) {
   for (let i = 0; i < count; i++) {
     const a = (i / count) * Math.PI * 2 + Math.random() * 0.2;
     const r = radius * (0.94 + Math.random() * 0.18);
-    const s = 0.5 + Math.random() * 0.45;
+    // Smaller than earlier drafts — at close mobile framings these read as a
+    // soft skirt of puffs, not a row of beige boulders.
+    const s = 0.3 + Math.random() * 0.26;
     dummy.position.set(Math.cos(a) * r, y + (Math.random() - 0.5) * 0.3, Math.sin(a) * r);
     dummy.scale.set(s, s * 0.65, s);
     dummy.updateMatrix();

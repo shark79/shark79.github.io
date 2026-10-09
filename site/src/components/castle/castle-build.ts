@@ -175,7 +175,9 @@ export function buildCastle(): CastleAssembly {
   world.add(weathervane);
 
   const pennant = P.buildPennant();
-  pennant.position.set(-0.35, turretT.topY + turret.roofH - 1.1, turret.z);
+  const pennantBaseY = turretT.topY + turret.roofH - 1.1;
+  pennant.position.set(-0.35, pennantBaseY, turret.z);
+  pennant.userData.baseY = pennantBaseY; // castle-scene animates position.y relative to this
   world.add(pennant);
 
   // ---- golden path (island surface, one segment per room) -------------

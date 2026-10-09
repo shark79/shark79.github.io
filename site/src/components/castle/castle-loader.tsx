@@ -28,11 +28,18 @@ function shouldSkip() {
  * A short, personality-driven loader: a pennant hoists up a tiny clay tower
  * while the 3D world warms up behind it. Pure CSS/SVG — costs nothing to
  * paint before three.js has even started loading. Skipped on repeat visits
- * within the same tab session (client and server can disagree on the very
- * first paint here by design; `suppressHydrationWarning` below is intentional).
+ * within the same tab session — but the skip decision (sessionStorage,
+ * matchMedia) only ever runs client-side, in an effect, never during the
+ * initial render: deciding it during render (server vs. client) produced a
+ * hydration mismatch, since the static HTML always shows the loader while a
+ * returning client could render "hidden" on its very first pass.
  */
 export function CastleLoader() {
-  const [phase, setPhase] = useState<"hidden" | "visible" | "fading">(() => (shouldSkip() ? "hidden" : "visible"));
+  const [phase, setPhase] = useState<"hidden" | "visible" | "fading">("visible");
+
+  useEffect(() => {
+    if (shouldSkip()) setPhase("hidden");
+  }, []);
 
   useEffect(() => {
     if (phase !== "visible") return;
@@ -58,7 +65,6 @@ export function CastleLoader() {
   return (
     <div
       aria-hidden
-      suppressHydrationWarning
       className="pointer-events-none fixed inset-0 z-[70] flex flex-col items-center justify-center gap-4 bg-[var(--background,#FBF7F1)] transition-opacity ease-[var(--ease-in-out,ease)]"
       style={{ opacity: phase === "fading" ? 0 : 1, transitionDuration: `${FADE_MS}ms` }}
     >

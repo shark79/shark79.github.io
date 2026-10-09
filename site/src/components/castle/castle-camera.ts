@@ -51,7 +51,10 @@ const DESKTOP_HALL = {
  * top ~40% of the frame (vertical Δ instead of horizontal), and fills less of
  * the frame overall so the section's header band above it stays clean. */
 const MOBILE: Keyframe[] = [
-  kf([0, 4.3, 16.5], [0, 2.0, 0], 48),
+  // Roofline sits below the intro copy, in the lower half of the viewport,
+  // clear of the door rail — a higher look target rotates the whole frame
+  // up, which (subject fixed) pushes the castle itself down on screen.
+  kf([0, 3.7, 14.6], [0, 3.15, 0], 46),
   kf([-2.55, 1.4, 16.06], [-2.55, -1.36, 1.15], 40), // about
   kf([0, 1.0, 12.87], [0, -1.07, 1.1], 40), // work
   kf([2.55, 1.4, 16.06], [2.55, -1.36, 1.15], 40), // experience
