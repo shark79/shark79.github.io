@@ -43,6 +43,9 @@ in code, so there are no image, video or model files for them.
 3. **About, Experience, Toolkit**: editorial sections with a numbered label, a large light
    statement, and hairline-separated content.
 4. **Gallery**: horizontal snap showreel, grayscale until hover or focus, full-size lightbox.
+   Vertical wheel input always scrolls the page, including over photos and at either end
+   of the strip. Browse photos with native horizontal trackpad gestures, touch swipes or
+   desktop arrow buttons; the gallery never intercepts vertical wheel input.
 5. **Contact**: "Let's talk." and the email address.
 
 ## Sky-to-sculpture handoff
@@ -90,6 +93,11 @@ much lighter opacity across its letters and panel geometry for all eleven projec
 including 1024px width. The final export retains 80% white backgrounds and computed
 20px glass blur; all panels fit without text clipping. TypeScript, ESLint and the
 production export passed again.
+
+The gallery wheel regression was checked at 1440px, 390px and 320px: vertical scrolling
+in both directions over photos at the start, middle and end; reaching the footer without
+moving the pointer; native horizontal gestures; desktop arrows; lightbox keys; no browser
+errors or horizontal page overflow. TypeScript, ESLint and the static export passed.
 Phone checks use browser emulation; performance on physical phones still needs a device pass.
 
 ## Tokens (`app/globals.css`)

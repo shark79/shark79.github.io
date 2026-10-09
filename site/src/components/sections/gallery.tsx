@@ -15,16 +15,6 @@ export function Gallery() {
     const track = trackRef.current;
     if (!track) return;
 
-    // A plain mouse wheel has no horizontal delta — translate vertical
-    // scroll into horizontal movement (trackpads send deltaX and already
-    // work natively).
-    const handleWheel = (e: WheelEvent) => {
-      if (Math.abs(e.deltaY) > Math.abs(e.deltaX)) {
-        track.scrollLeft += e.deltaY;
-        e.preventDefault();
-      }
-    };
-
     let startScrollLeft: number | null = null;
     const updateArrowState = () => {
       if (startScrollLeft === null) startScrollLeft = track.scrollLeft;
@@ -33,11 +23,9 @@ export function Gallery() {
     };
 
     updateArrowState();
-    track.addEventListener("wheel", handleWheel, { passive: false });
     track.addEventListener("scroll", updateArrowState, { passive: true });
     window.addEventListener("resize", updateArrowState);
     return () => {
-      track.removeEventListener("wheel", handleWheel);
       track.removeEventListener("scroll", updateArrowState);
       window.removeEventListener("resize", updateArrowState);
     };

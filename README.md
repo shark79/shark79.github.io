@@ -22,7 +22,8 @@ read in a minute and feel like an object worth scrolling.
   glass panels that keep the copy readable over the sculpture. Each project
   has 135vh of scroll with proximity snap.
 - **About, Experience, Toolkit, Gallery, Contact**: monochrome editorial sections. The
-  gallery is a grayscale showreel with a full-size lightbox.
+  gallery is a grayscale showreel with a full-size lightbox. Vertical scrolling stays with
+  the page; horizontal gestures, swipes and arrow buttons browse the photos.
 
 Built with **Next.js (App Router) + TypeScript + Tailwind CSS v4 + three.js**, statically
 exported and deployed to GitHub Pages. Fonts: Onest and Geist Mono via `next/font`. Design
