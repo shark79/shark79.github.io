@@ -51,14 +51,7 @@ main { isolation: isolate; }
   padding-left: 0.14em;
 }
 
-.hero-name-clouds {
-  left: -12%;
-  top: -55%;
-  width: 124%;
-  height: 210%;
-}
-
-/* Cloud banks extend around the heading without widening the phone viewport. */
+/* The foreground cloud field fills the hero without widening the viewport. */
 #top { overflow: clip; }
 
 @media (min-width: 640px) {
@@ -94,9 +87,22 @@ main > section:not(#top):not(#work) {
 /* Frosted pill used by the nav over the sky. */
 .glass {
   background: color-mix(in oklab, white 62%, transparent);
-  backdrop-filter: blur(14px) saturate(1.2);
+  /* Keep the standard declaration last so the optimizer preserves it. */
   -webkit-backdrop-filter: blur(14px) saturate(1.2);
+  backdrop-filter: blur(14px) saturate(1.2);
   border: 1px solid color-mix(in oklab, white 70%, transparent);
+}
+
+/* A white glass surface separates project copy from the moving sculpture. */
+.project-glass {
+  background: color-mix(in oklab, var(--background) 80%, transparent);
+  -webkit-backdrop-filter: blur(20px) saturate(1.15);
+  backdrop-filter: blur(20px) saturate(1.15);
+  border: 1px solid color-mix(in oklab, var(--background) 90%, transparent);
+  border-radius: 24px;
+  box-shadow:
+    inset 0 1px 0 var(--background),
+    0 12px 44px color-mix(in oklab, var(--foreground) 6%, transparent);
 }
 
 .scrollbar-none {

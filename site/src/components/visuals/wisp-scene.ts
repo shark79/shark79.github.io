@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { createCloudNoise } from "./cloud-scene";
 
-/** Dense, volumetric foreground banks surrounding the heading, above its ink. */
+/** A full-hero cloud field, with a soft clearing over the real heading. */
 export function createWisps(canvas: HTMLCanvasElement, reducedMotion: boolean) {
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, premultipliedAlpha: true, antialias: false, powerPreference: "low-power" });
   renderer.setClearColor(0x000000, 0);
@@ -11,6 +11,7 @@ export function createWisps(canvas: HTMLCanvasElement, reducedMotion: boolean) {
   const uniforms = {
     uTime: { value: 0 },
     uAspect: { value: 1 },
+    uNameRect: { value: new THREE.Vector4(0.2, 0.35, 0.8, 0.7) },
     uNoise: { value: texture },
   };
   const mat = new THREE.ShaderMaterial({
@@ -23,6 +24,7 @@ export function createWisps(canvas: HTMLCanvasElement, reducedMotion: boolean) {
       precision highp sampler3D;
       uniform float uTime;
       uniform float uAspect;
+      uniform vec4 uNameRect;
       uniform sampler3D uNoise;
       in vec2 vUv;
       out vec4 fragColor;
@@ -34,23 +36,22 @@ export function createWisps(canvas: HTMLCanvasElement, reducedMotion: boolean) {
         return max(a, b) + h * h * 0.06;
       }
       float density(vec3 p) {
-        // The banks drift around a clear centre; their noise changes the
-        // overlap across the letters without making the whole name disappear.
-        p.x -= sin(uTime * 0.11) * 0.13;
-        float bank = puff(p, vec3(-1.65, 0.02, 0.0), vec3(0.9, 0.46, 0.8));
-        bank = joinPuffs(bank, puff(p, vec3(-1.08, 0.43, 0.12), vec3(0.7, 0.38, 0.7)));
-        bank = joinPuffs(bank, puff(p, vec3(-0.35, 0.70, 0.0), vec3(0.85, 0.36, 0.8)));
-        bank = joinPuffs(bank, puff(p, vec3(0.75, 0.65, 0.12), vec3(0.85, 0.4, 0.75)));
-        bank = joinPuffs(bank, puff(p, vec3(1.55, -0.05, 0.0), vec3(0.9, 0.5, 0.8)));
-        bank = joinPuffs(bank, puff(p, vec3(0.95, -0.43, 0.1), vec3(0.75, 0.4, 0.8)));
-        bank = joinPuffs(bank, puff(p, vec3(0.20, -0.70, 0.0), vec3(0.9, 0.37, 0.75)));
-        bank = joinPuffs(bank, puff(p, vec3(-0.93, -0.52, 0.12), vec3(0.85, 0.35, 0.75)));
-        float shape = texture(uNoise, p * 0.32 + vec3(0.24 + uTime * 0.003, 0.13, 0.42)).r;
-        float detail = texture(uNoise, p * 1.2 + vec3(uTime * 0.005, 0.2, 0.7)).r;
-        return max(0.0, bank + (shape - 0.5) * 0.65 - (1.0 - detail) * 0.16) * 4.5;
+        // Broad banks occupy the viewport independently of the name. Their
+        // irregular edges and overlapping depths leave natural sky breaks.
+        vec3 q = p;
+        q.x -= sin(uTime * 0.055) * 0.12;
+        float bank = puff(q, vec3(-0.85, 0.85, 0.0), vec3(0.95, 0.80, 0.85));
+        bank = joinPuffs(bank, puff(q, vec3(0.30, 1.05, 0.2), vec3(1.05, 0.8, 0.85)));
+        bank = joinPuffs(bank, puff(q, vec3(0.90, 0.30, 0.0), vec3(1.0, 0.85, 0.9)));
+        bank = joinPuffs(bank, puff(q, vec3(-0.85, -0.10, 0.25), vec3(0.8, 0.8, 0.9)));
+        bank = joinPuffs(bank, puff(q, vec3(-0.30, -0.85, 0.0), vec3(1.3, 0.7, 0.9)));
+        bank = joinPuffs(bank, puff(q, vec3(0.55, -0.55, 0.2), vec3(0.9, 0.7, 0.8)));
+        float shape = texture(uNoise, p * vec3(uAspect, 1.0, 1.0) * 0.36 + vec3(0.24 + uTime * 0.002, 0.13, 0.42)).r;
+        float detail = texture(uNoise, p * vec3(uAspect, 1.0, 1.0) * 1.2 + vec3(uTime * 0.004, 0.2, 0.7)).r;
+        return max(0.0, bank + (shape - 0.5) * 0.85 - (1.0 - detail) * 0.23) * 4.0;
       }
       void main() {
-        vec2 xy = (vUv - 0.5) * vec2(uAspect, 1.0) * 2.0;
+        vec2 xy = (vUv - 0.5) * 2.0;
         float transmission = 1.0;
         vec3 color = vec3(0.0);
         const float stepSize = 2.4 / float(STEPS);
@@ -69,14 +70,15 @@ export function createWisps(canvas: HTMLCanvasElement, reducedMotion: boolean) {
           }
         }
         float alpha = 1.0 - transmission;
-        // Fade before the enlarged canvas boundary, avoiding rectangular edges.
-        float edge = smoothstep(0.0, 0.13, vUv.x) * (1.0 - smoothstep(0.87, 1.0, vUv.x))
-          * smoothstep(0.0, 0.12, vUv.y) * (1.0 - smoothstep(0.88, 1.0, vUv.y));
-        // Dense surroundings with strong overlap; a little ink remains visible
-        // where these foreground banks cross the actual heading.
-        float nameArea = smoothstep(0.06, 0.12, vUv.x) * (1.0 - smoothstep(0.88, 0.94, vUv.x))
-          * smoothstep(0.23, 0.29, vUv.y) * (1.0 - smoothstep(0.71, 0.77, vUv.y));
-        float capped = min(alpha, mix(0.96, 0.82, nameArea)) * edge;
+        // Thin the field across the heading's actual bounds, with broad,
+        // noise-disturbed edges. This is a clearing in a full sky, not a halo.
+        float ripple = (texture(uNoise, vec3(vUv * 2.0, uTime * 0.003)).r - 0.5) * 0.035;
+        vec2 uv = vUv + vec2(ripple, ripple * 0.5);
+        float clear = smoothstep(uNameRect.x - 0.09, uNameRect.x + 0.015, uv.x)
+          * (1.0 - smoothstep(uNameRect.z - 0.015, uNameRect.z + 0.09, uv.x))
+          * smoothstep(uNameRect.y - 0.09, uNameRect.y + 0.015, uv.y)
+          * (1.0 - smoothstep(uNameRect.w - 0.015, uNameRect.w + 0.09, uv.y));
+        float capped = min(alpha, mix(0.97, 0.16, clear));
         fragColor = vec4(color * capped / max(alpha, 0.001), capped);
       }
     `,
@@ -101,20 +103,32 @@ export function createWisps(canvas: HTMLCanvasElement, reducedMotion: boolean) {
   document.addEventListener("visibilitychange", onVisibility);
   function resize() {
     const w = canvas.clientWidth, h = canvas.clientHeight;
-    renderer.setPixelRatio(w < 640 ? 0.6 : 0.7);
+    renderer.setPixelRatio(w < 640 ? 0.42 : 0.45);
     renderer.setSize(w, h, false);
     uniforms.uAspect.value = w / h;
+    const heading = canvas.parentElement?.querySelector("h1");
+    if (heading) {
+      const bounds = canvas.getBoundingClientRect();
+      const name = heading.getBoundingClientRect();
+      uniforms.uNameRect.value.set(
+        (name.left - bounds.left) / w, 1 - (name.bottom - bounds.top) / h,
+        (name.right - bounds.left) / w, 1 - (name.top - bounds.top) / h,
+      );
+    }
     const steps = innerWidth < 640 ? 14 : 18;
     if (mat.defines.STEPS !== steps) { mat.defines.STEPS = steps; mat.needsUpdate = true; }
     // Reduced motion keeps the dense framing, rendered once without drift.
     renderer.render(scene, camera);
   }
+  const headingObserver = new ResizeObserver(resize);
+  const heading = canvas.parentElement?.querySelector("h1");
+  if (heading) headingObserver.observe(heading);
   resize();
   if (!reducedMotion) raf = requestAnimationFrame(frame);
   return {
     resize,
     dispose: () => {
-      cancelAnimationFrame(raf); io.disconnect();
+      cancelAnimationFrame(raf); io.disconnect(); headingObserver.disconnect();
       document.removeEventListener("visibilitychange", onVisibility);
       quad.geometry.dispose(); mat.dispose(); texture.dispose(); renderer.dispose();
     },

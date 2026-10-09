@@ -21,19 +21,23 @@ in code, so there are no image, video or model files for them.
    y −0.6 to 2.6 integrates Beer–Lambert absorption, powder lighting, four sun-shadow
    samples and atmospheric haze. Bright white tops, soft grey bases, pale blue breaks.
    The real `h1` is centred on two lines, light weight, 0.14em tracking, approximately
-   44px on phones and up to 140px on wide screens. Dense foreground cloud banks
-   (`visuals/wisp-scene.ts`) surround both lines and overlap the outer letters. This
-   enlarged canvas extends 12% beyond each side and 55% above/below the heading, and
-   sits explicitly above the real `h1` in an isolated stacking context. The banks use
-   the same baked 3D noise as the sky, with their own volumetric lighting and slow drift.
-   Alpha reaches 0.96 around the name and 0.82 across the letters, preserving some ink
-   through the clouds. The centre stays open. A centred work link follows the name.
+   44px on phones and up to 140px on wide screens. The foreground cloud field
+   (`visuals/wisp-scene.ts`) fills the entire hero with broad, irregular banks independent
+   of the heading's shape. It sits above the real `h1`; the role, work link and scroll cue
+   remain above the field. The banks use the same baked 3D noise as the sky, with their
+   own volumetric lighting and slow drift. Alpha reaches 0.97 throughout the surrounding
+   space, thinning to about 0.16 across the heading for clear letters. A softly feathered,
+   noise-disturbed clearing follows the heading's actual bounds and updates with font or
+   viewport size changes. A centred work link follows the name; there is no tagline.
 2. **Work** (`sections/work.tsx`): one pinned scene. The spiral (`visuals/spiral-scene.ts`, 210
    instanced rounded slats on a helical spine, studio light and soft shadows) sits in a sticky
    stage and turns with scroll. The 11 projects hand over one by one around it: title and brief
    on the left, four numbers and the stack on the right, tick index on the far right.
-   Desktop puts the spiral between the columns. Phones put it in the upper stage, with the text
-   on one shared white wash below. Each project has 135vh of scroll and a proximity snap
+   Desktop puts the spiral between the columns. Project text and stats sit on separate
+   translucent white glass panels: 80% white, 20px backdrop blur, 24px corners, a bright
+   border and a restrained shadow. Phones use one padded glass panel over the shared
+   white wash below the sculpture. Inactive panels fade out as a whole so their surfaces
+   don't stack over the visible project. Each project has 135vh of scroll and a proximity snap
    point at its midpoint. Fast-wheel checks traverse all eleven projects and leave the
    story normally, so proximity snap is retained.
 3. **About, Experience, Toolkit**: editorial sections with a numbered label, a large light
@@ -55,8 +59,8 @@ Lazy-loaded scenes initialise at the current scroll position, including direct a
 
 - Sky: 48 steps at 0.5 CSS-pixel resolution on desktop; 36 steps at 0.42 on small screens.
   Retina does not multiply the raymarch cost. Quality updates when crossing the breakpoint.
-- Foreground banks: 18 steps on desktop and 14 on phones, with two sun-shadow samples.
-  Render scale is 0.7 for large canvases and 0.6 for small canvases, independent of DPR.
+- Foreground field: 18 steps on desktop and 14 on phones, with two sun-shadow samples.
+  Render scale is 0.45 on desktop and 0.42 on phones, independent of DPR.
 - The sky stops its animation loop at flight = 1 and restarts on scrolling back. Foreground clouds and
   the spiral pause offscreen; all scenes pause when the document is hidden and dispose
   their GPU resources on unmount.
@@ -64,6 +68,8 @@ Lazy-loaded scenes initialise at the current scroll position, including direct a
   entrance lift or idle spiral rotation, no scroll snap, and opacity-only reveals.
 - WebGL fallback: a CSS sky gradient follows the same fade to white; all copy and links
   remain ordinary accessible DOM content.
+- Glass CSS keeps the prefixed backdrop-filter declaration before the standard one, so
+  the production optimizer retains the blur for Chromium as well as Safari.
 
 ## Verification
 
@@ -76,11 +82,14 @@ reduced motion and unavailable WebGL. No normal-rendering console errors or hori
 overflow. The initial sky implementation also passed pause/restart, responsive resizing
 and direct `#work` initialisation checks.
 
-The dense foreground follow-up was rebuilt and checked at 1440×900, 390×844 (DPR 2)
-and 320px: screenshots, substantial alpha coverage across the heading, the canvas above
-and larger than the name, no overflow, offscreen pause/restart, three project slides,
-every section, mobile menu, work link, and static reduced-motion framing. TypeScript,
-ESLint and the production export passed again.
+The full-hero cloud field and glass-panel revision was rebuilt and checked at 1440×900,
+390×844 (DPR 2) and 320px. All 86 browser flow checks passed again, including scrolling
+through all projects, project focus, every section, lightbox/menu keys, reduced motion
+and unavailable WebGL. Additional checks cover dense clouds beyond the heading with
+much lighter opacity across its letters and panel geometry for all eleven projects,
+including 1024px width. The final export retains 80% white backgrounds and computed
+20px glass blur; all panels fit without text clipping. TypeScript, ESLint and the
+production export passed again.
 Phone checks use browser emulation; performance on physical phones still needs a device pass.
 
 ## Tokens (`app/globals.css`)

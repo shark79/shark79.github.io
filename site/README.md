@@ -18,7 +18,8 @@ the resulting fonts. Preview the export at http://localhost:8765.
 
 All copy lives in `src/lib/content.ts`. Projects are sorted by their ISO `start`
 date. Client visuals lazy-load through `use-scene.ts`: a volumetric sky, dense
-foreground cloud banks above and around the real heading, and a scroll-driven slat spiral.
+foreground clouds filling the hero with a clearing over the real heading, and a scroll-driven
+slat spiral with translucent white glass behind the project copy and stats.
 The sky-to-work handoff shares scroll geometry through `sky-progress.ts`.
 
 Before shipping visual changes, check the static export in Chromium at desktop

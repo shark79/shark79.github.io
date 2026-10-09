@@ -120,14 +120,15 @@ export function Work() {
                 {/* Left: what it is */}
                 <div
                   className={cn(
-                    "absolute inset-x-6 bottom-10 sm:inset-x-12 lg:right-auto lg:bottom-auto lg:top-1/2 lg:w-[34%] lg:-translate-y-1/2",
+                    "project-glass absolute inset-x-6 bottom-6 p-5 transition-opacity duration-500 sm:inset-x-12 sm:p-7 lg:right-auto lg:bottom-auto lg:top-1/2 lg:w-[34%] lg:-translate-y-1/2",
+                    state === "in" ? "opacity-100" : "opacity-0",
                   )}
                 >
                   <Line state={state} i={0}>
                     <p className="label text-muted-foreground">{p.period}</p>
                   </Line>
                   <Line state={state} i={1}>
-                    <h3 className="mt-4 text-[clamp(30px,4.2vw,58px)] leading-[1.04] font-normal tracking-[-0.02em]">
+                    <h3 className="mt-4 text-[clamp(28px,3.6vw,52px)] leading-[1.04] font-normal tracking-[-0.02em]">
                       {p.name}
                     </h3>
                   </Line>
@@ -157,8 +158,11 @@ export function Work() {
                 </div>
 
                 {/* Right: the numbers (desktop only — mobile keeps it to the essentials) */}
-                <div className="absolute top-1/2 right-12 hidden w-[24%] -translate-y-1/2 lg:block">
-                  <ul className="grid grid-cols-2 gap-x-8 gap-y-9">
+                <div className={cn(
+                  "project-glass absolute top-1/2 right-12 hidden w-[24%] -translate-y-1/2 p-6 transition-opacity duration-500 lg:block",
+                  state === "in" ? "opacity-100" : "opacity-0",
+                )}>
+                  <ul className="grid grid-cols-2 gap-x-4 gap-y-9">
                     {p.stats.map((s, k) => (
                       <li key={s.label}>
                         <Line state={state} i={k + 1}>
