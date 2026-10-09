@@ -42,18 +42,18 @@ export function Hero() {
       </div>
       <section id="top" className="relative z-10 h-svh min-h-[560px]">
         <div className="mx-auto flex h-full max-w-[1600px] flex-col items-center justify-center px-6 text-center sm:px-12">
-          <p className="label text-foreground/70">{PROFILE.role}</p>
-          <div className="relative mt-7">
-            <h1 className="hero-name font-light leading-[1.1] uppercase">
+          <p className="label relative z-20 text-foreground/70">{PROFILE.role}</p>
+          <div className="hero-name-stage relative mt-7 isolate">
+            <h1 className="hero-name relative z-0 font-light leading-[1.1] uppercase">
               {PROFILE.name.split(" ").map((name) => <span key={name} className="block">{name}</span>)}
             </h1>
-            <canvas ref={wispRef} aria-hidden="true" className="pointer-events-none absolute inset-0 h-full w-full" />
+            <canvas ref={wispRef} aria-hidden="true" className="hero-name-clouds pointer-events-none absolute z-10" />
           </div>
-          <p className="mt-8 max-w-[320px] text-[17px] leading-relaxed font-light text-foreground/80 sm:max-w-none sm:text-[19px]">
+          <p className="relative z-20 mt-8 max-w-[320px] text-[17px] leading-relaxed font-light text-foreground/80 sm:max-w-none sm:text-[19px]">
             {PROFILE.tagline[0]} {PROFILE.tagline[1]}
           </p>
-          <span aria-hidden="true" className="mt-7 block h-px w-14 bg-foreground/40" />
-          <a href="#work" className="group mt-7 inline-flex min-h-11 items-center gap-3 text-[17px] font-light tracking-wide transition-opacity hover:opacity-70">
+          <span aria-hidden="true" className="relative z-20 mt-7 block h-px w-14 bg-foreground/40" />
+          <a href="#work" className="group relative z-20 mt-7 inline-flex min-h-11 items-center gap-3 text-[17px] font-light tracking-wide transition-opacity hover:opacity-70">
             See what I&apos;ve built
             <ArrowRight className="size-4 transition-transform duration-500 ease-[var(--ease-out)] group-hover:translate-x-1" />
           </a>

@@ -17,8 +17,8 @@ The build fetches Onest and Geist Mono through `next/font/google` and self-hosts
 the resulting fonts. Preview the export at http://localhost:8765.
 
 All copy lives in `src/lib/content.ts`. Projects are sorted by their ISO `start`
-date. Client visuals lazy-load through `use-scene.ts`: volumetric clouds, a small
-transparent wisp layer over the real heading, and a scroll-driven slat spiral.
+date. Client visuals lazy-load through `use-scene.ts`: a volumetric sky, dense
+foreground cloud banks above and around the real heading, and a scroll-driven slat spiral.
 The sky-to-work handoff shares scroll geometry through `sky-progress.ts`.
 
 Before shipping visual changes, check the static export in Chromium at desktop

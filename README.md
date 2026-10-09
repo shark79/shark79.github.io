@@ -13,7 +13,8 @@ Most visitors arrive by scanning a QR code at a conference, on a phone. The site
 read in a minute and feel like an object worth scrolling.
 
 - **Hero**: a volumetric cloud sky (three.js, CPU-baked 3D noise and raymarched lighting)
-  behind a large centred name. Transparent wisps drift across a few letters at a time.
+  behind a large centred name. Dense foreground cloud banks surround the name and drift
+  over its letters, with the real heading behind the clouds.
 - **Transition**: scrolling flies through the fixed sky into white mist, where the spiral
   emerges with fog and a gentle lift. Reduced motion uses a simple crossfade.
 - **Work**: a pinned, scroll-driven scene. A white slatted spiral, built from 210 instanced
@@ -55,7 +56,7 @@ date. The list is sorted newest-first in code, so never hand-order it.
 site/src/
   app/                  layout, page, globals.css (tokens)
   components/sections/  hero, work, about, experience, skills, gallery, contact
-  components/visuals/   clouds, wisps, spiral, shared scroll progress, lazy scene hook
+  components/visuals/   sky, foreground clouds, spiral, shared scroll progress, lazy scene hook
   components/ui/        section head, reveal observer, photo lightbox
   lib/content.ts        every word on the site
 site/public/gallery/    photos (+ paintings/: 640px web copies used in the showreel)

@@ -1,7 +1,7 @@
 import * as THREE from "three";
 
 /** A periodic, CPU-baked volume: broad value noise with billowed fine octaves. */
-function cloudNoise() {
+export function createCloudNoise() {
   const size = 64;
   const data = new Uint8Array(size ** 3);
   const hash = (x: number, y: number, z: number, period: number) => {
@@ -137,7 +137,7 @@ export function createClouds(canvas: HTMLCanvasElement, reducedMotion: boolean):
   const renderer = new THREE.WebGLRenderer({ canvas, antialias: false, powerPreference: "low-power" });
   const scene = new THREE.Scene();
   const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0, 1);
-  const texture = cloudNoise();
+  const texture = createCloudNoise();
   const uniforms = {
     uNoise: { value: texture }, uTime: { value: 40 }, uFly: { value: 0 },
     uRes: { value: new THREE.Vector2(1, 1) }, uPointer: { value: new THREE.Vector2() },

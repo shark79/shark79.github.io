@@ -21,9 +21,13 @@ in code, so there are no image, video or model files for them.
    y −0.6 to 2.6 integrates Beer–Lambert absorption, powder lighting, four sun-shadow
    samples and atmospheric haze. Bright white tops, soft grey bases, pale blue breaks.
    The real `h1` is centred on two lines, light weight, 0.14em tracking, approximately
-   44px on phones and up to 140px on wide screens. A small transparent foreground canvas
-   (`visuals/wisp-scene.ts`) moves one narrow wisp across each row; about 3–4 letters are
-   partly veiled at once, with alpha capped at 0.6. The tagline and work link are centred.
+   44px on phones and up to 140px on wide screens. Dense foreground cloud banks
+   (`visuals/wisp-scene.ts`) surround both lines and overlap the outer letters. This
+   enlarged canvas extends 12% beyond each side and 55% above/below the heading, and
+   sits explicitly above the real `h1` in an isolated stacking context. The banks use
+   the same baked 3D noise as the sky, with their own volumetric lighting and slow drift.
+   Alpha reaches 0.96 around the name and 0.82 across the letters, preserving some ink
+   through the clouds. The centre stays open. The tagline and work link are centred.
 2. **Work** (`sections/work.tsx`): one pinned scene. The spiral (`visuals/spiral-scene.ts`, 210
    instanced rounded slats on a helical spine, studio light and soft shadows) sits in a sticky
    stage and turns with scroll. The 11 projects hand over one by one around it: title and brief
@@ -51,10 +55,12 @@ Lazy-loaded scenes initialise at the current scroll position, including direct a
 
 - Sky: 48 steps at 0.5 CSS-pixel resolution on desktop; 36 steps at 0.42 on small screens.
   Retina does not multiply the raymarch cost. Quality updates when crossing the breakpoint.
-- The sky stops its animation loop at flight = 1 and restarts on scrolling back. Wisps and
+- Foreground banks: 18 steps on desktop and 14 on phones, with two sun-shadow samples.
+  Render scale is 0.7 for large canvases and 0.6 for small canvases, independent of DPR.
+- The sky stops its animation loop at flight = 1 and restarts on scrolling back. Foreground clouds and
   the spiral pause offscreen; all scenes pause when the document is hidden and dispose
   their GPU resources on unmount.
-- Reduced motion: static sky with a simple crossfade, clear letters without wisps, no
+- Reduced motion: static sky with a simple crossfade, dense foreground framing rendered once, no
   entrance lift or idle spiral rotation, no scroll snap, and opacity-only reveals.
 - WebGL fallback: a CSS sky gradient follows the same fade to white; all copy and links
   remain ordinary accessible DOM content.
@@ -67,9 +73,14 @@ and checked Chromium with `--use-gl=angle --ignore-gpu-blocklist` at 1440×900 a
 hero-to-work positions, projects 1/4/8/11, fast scrolling through all projects, keyboard
 project focus, lightbox arrows/Esc and focus restoration, mobile-menu navigation/Esc,
 reduced motion and unavailable WebGL. No normal-rendering console errors or horizontal
-overflow. Final cumulus refinement was rebuilt and checked again at desktop and phone sizes;
-additional checks at all three widths verified wisp alpha ≤ 0.6, sky pause/restart,
-responsive resizing and direct `#work` initialisation.
+overflow. The initial sky implementation also passed pause/restart, responsive resizing
+and direct `#work` initialisation checks.
+
+The dense foreground follow-up was rebuilt and checked at 1440×900, 390×844 (DPR 2)
+and 320px: screenshots, substantial alpha coverage across the heading, the canvas above
+and larger than the name, no overflow, offscreen pause/restart, three project slides,
+every section, mobile menu, work link, and static reduced-motion framing. TypeScript,
+ESLint and the production export passed again.
 Phone checks use browser emulation; performance on physical phones still needs a device pass.
 
 ## Tokens (`app/globals.css`)
@@ -86,4 +97,4 @@ for the `.label` small caps (11px, 0.22em tracking). Motion: `--ease-out`
 - The visuals lazy-load (`visuals/use-scene.ts`), so three.js stays out of the first bundle. If
   WebGL is missing, the CSS backdrop shows instead.
 - Reduced motion: no idle animation, the spiral snaps to the scroll position, the sky
-  crossfades, wisps are absent, proximity snap is disabled, and reveals are opacity-only.
+  crossfades, foreground clouds stay static, proximity snap is disabled, and reveals are opacity-only.

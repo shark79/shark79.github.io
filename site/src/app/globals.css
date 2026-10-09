@@ -51,6 +51,16 @@ main { isolation: isolate; }
   padding-left: 0.14em;
 }
 
+.hero-name-clouds {
+  left: -12%;
+  top: -55%;
+  width: 124%;
+  height: 210%;
+}
+
+/* Cloud banks extend around the heading without widening the phone viewport. */
+#top { overflow: clip; }
+
 @media (min-width: 640px) {
   .hero-name { font-size: clamp(44px, 9vw, 140px); }
 }
