@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { createCloudNoise } from "./cloud-scene";
 
-/** A full-hero cloud field that clears the heading as the sky scrolls away. */
+/** A full-hero cloud field, with a soft clearing over the real heading. */
 export function createWisps(canvas: HTMLCanvasElement, reducedMotion: boolean) {
   const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, premultipliedAlpha: true, antialias: false, powerPreference: "low-power" });
   renderer.setClearColor(0x000000, 0);
@@ -10,7 +10,6 @@ export function createWisps(canvas: HTMLCanvasElement, reducedMotion: boolean) {
   const texture = createCloudNoise();
   const uniforms = {
     uTime: { value: 0 },
-    uClear: { value: 0 },
     uAspect: { value: 1 },
     uNameRect: { value: new THREE.Vector4(0.2, 0.35, 0.8, 0.7) },
     uNoise: { value: texture },
@@ -24,7 +23,6 @@ export function createWisps(canvas: HTMLCanvasElement, reducedMotion: boolean) {
       precision highp float;
       precision highp sampler3D;
       uniform float uTime;
-      uniform float uClear;
       uniform float uAspect;
       uniform vec4 uNameRect;
       uniform sampler3D uNoise;
@@ -80,11 +78,7 @@ export function createWisps(canvas: HTMLCanvasElement, reducedMotion: boolean) {
           * (1.0 - smoothstep(uNameRect.z - 0.015, uNameRect.z + 0.09, uv.x))
           * smoothstep(uNameRect.y - 0.09, uNameRect.y + 0.015, uv.y)
           * (1.0 - smoothstep(uNameRect.w - 0.015, uNameRect.w + 0.09, uv.y));
-        float nameVeil = mix(0.16, 0.0, smoothstep(0.0, 0.28, uClear));
-        float capped = min(alpha, mix(0.97, nameVeil, clear));
-        // The name clears first, then the surrounding banks dissolve. Feather
-        // the lower field so it never ends in a horizontal section-sized edge.
-        capped *= (1.0 - smoothstep(0.0, 0.85, uClear)) * smoothstep(0.0, 0.18, vUv.y);
+        float capped = min(alpha, mix(0.97, 0.16, clear));
         fragColor = vec4(color * capped / max(alpha, 0.001), capped);
       }
     `,
@@ -95,18 +89,17 @@ export function createWisps(canvas: HTMLCanvasElement, reducedMotion: boolean) {
   const start = performance.now();
   const io = new IntersectionObserver(([e]) => {
     visible = e.isIntersecting;
-    if (visible) invalidate();
+    if (visible && !raf && !reducedMotion) raf = requestAnimationFrame(frame);
   });
   io.observe(canvas);
-  function invalidate() { if (!raf) raf = requestAnimationFrame(frame); }
   function frame(now: number) {
     raf = 0;
-    if (!visible || document.hidden) return;
-    if (!reducedMotion) uniforms.uTime.value = (now - start) / 1000;
+    if (!visible || document.hidden || reducedMotion) return;
+    uniforms.uTime.value = (now - start) / 1000;
     renderer.render(scene, camera);
-    if (!reducedMotion && uniforms.uClear.value < 0.85) raf = requestAnimationFrame(frame);
+    raf = requestAnimationFrame(frame);
   }
-  const onVisibility = () => { if (!document.hidden && visible) invalidate(); };
+  const onVisibility = () => { if (!document.hidden && visible && !raf && !reducedMotion) raf = requestAnimationFrame(frame); };
   document.addEventListener("visibilitychange", onVisibility);
   function resize() {
     const w = canvas.clientWidth, h = canvas.clientHeight;
@@ -133,12 +126,6 @@ export function createWisps(canvas: HTMLCanvasElement, reducedMotion: boolean) {
   resize();
   if (!reducedMotion) raf = requestAnimationFrame(frame);
   return {
-    setClear: (p: number) => {
-      const next = THREE.MathUtils.clamp(p, 0, 1);
-      if (uniforms.uClear.value === next) return;
-      uniforms.uClear.value = next;
-      invalidate();
-    },
     resize,
     dispose: () => {
       cancelAnimationFrame(raf); io.disconnect(); headingObserver.disconnect();

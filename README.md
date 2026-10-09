@@ -14,11 +14,9 @@ read in a minute and feel like an object worth scrolling.
 
 - **Hero**: a volumetric cloud sky (three.js, CPU-baked 3D noise and raymarched lighting)
   behind a large centred name. A dense foreground cloud field fills the hero, with a soft
-  clearing across the letters and a centred work link below. Scrolling clears the name
-  first, then dissolves the surrounding banks.
+  clearing across the letters and a centred work link below.
 - **Transition**: scrolling flies through the fixed sky into white mist, where the spiral
-  emerges with fog and a gentle lift. Its visual stage extends behind the hero, with
-  feathered cloud edges so there is no hard section cut. Reduced motion uses a simple crossfade.
+  emerges with fog and a gentle lift. Reduced motion uses a simple crossfade.
 - **Work**: a pinned, scroll-driven scene. A white slatted spiral, built from 210 instanced
   slats, turns while each project transitions in with its numbers and stack on 80% white
   glass panels that keep the copy readable over the sculpture. Each project

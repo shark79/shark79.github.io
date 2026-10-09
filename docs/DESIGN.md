@@ -28,10 +28,7 @@ in code, so there are no image, video or model files for them.
    own volumetric lighting and slow drift. Alpha reaches 0.97 throughout the surrounding
    space, thinning to about 0.16 across the heading for clear letters. A softly feathered,
    noise-disturbed clearing follows the heading's actual bounds and updates with font or
-   viewport size changes. Scroll removes the veil over the letters by 28% of the hero's
-   travel, then fades the surrounding field out by 85%; scrolling back restores it.
-   The lower 18% of the field is feathered to avoid a horizontal boundary. A centred
-   work link follows the name; there is no tagline.
+   viewport size changes. A centred work link follows the name; there is no tagline.
 2. **Work** (`sections/work.tsx`): one pinned scene. The spiral (`visuals/spiral-scene.ts`, 210
    instanced rounded slats on a helical spine, studio light and soft shadows) sits in a sticky
    stage and turns with scroll. The 11 projects hand over one by one around it: title and brief
@@ -55,12 +52,8 @@ in code, so there are no image, video or model files for them.
 
 `visuals/sky-progress.ts` reads the work section's actual offset: flight is 0 at the top
 and 1 when work pins. `setFly` moves the camera forward nine units, increases coverage
-and resolves to exact white mist. The sky remains fixed behind both sections. The spiral
-has its own transparent sticky visual stage extending upward by the hero's full height
-(`max(100svh, 560px)`). It starts at the same viewport top as the sky, rather than being
-clipped at the work section boundary, and leaves with the last project. The project copy
-keeps its existing sticky stage. The hero paints above the spiral so remaining cloud banks
-veil its entrance; a mask feathers the sculpture at the canvas edges. During the latter half of the hero scroll,
+and resolves to exact white mist. The sky remains fixed behind both sections; the sticky
+stage and spiral canvas stay transparent. During the latter half of the hero scroll,
 `setEnter` lifts and turns the sculpture slightly while opening its white fog range from
 14.1 to 26 and increasing canvas opacity. Sections after work have opaque white backgrounds.
 Lazy-loaded scenes initialise at the current scroll position, including direct anchor visits.
@@ -71,12 +64,10 @@ Lazy-loaded scenes initialise at the current scroll position, including direct a
   Retina does not multiply the raymarch cost. Quality updates when crossing the breakpoint.
 - Foreground field: 18 steps on desktop and 14 on phones, with two sun-shadow samples.
   Render scale is 0.45 on desktop and 0.42 on phones, independent of DPR.
-- The sky stops its animation loop at flight = 1 and restarts on scrolling back. Foreground clouds
-  also stop when cleared at 85% of hero travel; the spiral stops while its entrance opacity
-  is zero. Both pause offscreen; all scenes pause when the document is hidden and dispose
+- The sky stops its animation loop at flight = 1 and restarts on scrolling back. Foreground clouds and
+  the spiral pause offscreen; all scenes pause when the document is hidden and dispose
   their GPU resources on unmount.
-- Reduced motion: static sky with a simple crossfade, static foreground banks redrawn only
-  for scroll clearing and resizing, no
+- Reduced motion: static sky with a simple crossfade, dense foreground framing rendered once, no
   entrance lift or idle spiral rotation, no scroll snap, and opacity-only reveals.
 - WebGL fallback: a CSS sky gradient follows the same fade to white; all copy and links
   remain ordinary accessible DOM content.
@@ -109,14 +100,6 @@ moving the pointer; native horizontal gestures; desktop arrows; lightbox keys; n
 errors or horizontal page overflow. TypeScript, ESLint and the static export passed.
 Phone checks use browser emulation; performance on physical phones still needs a device pass.
 
-The scroll-clearing and continuous spiral-stage revision passed TypeScript, ESLint and the
-production export, followed by all 86 browser flow checks. Targeted checks at 1440px,
-390px (DPR 2) and 320px, with both normal and reduced motion, measured falling cloud
-opacity over the name, full clearing by 28% of hero travel, restoration on reverse scroll,
-and a spiral canvas that stays at the viewport top throughout the handoff. The cleared
-foreground and invisible spiral stop rendering; the spiral leaves with work. Direct
-`#work` loading also initialises correctly. Transition screenshots show no horizontal cut.
-
 ## Tokens (`app/globals.css`)
 
 White `#ffffff`, ink `#0d0e0f`, secondary `#5c6166` (6.3:1), hairline `#e4e6e8`. The only colour
@@ -131,4 +114,4 @@ for the `.label` small caps (11px, 0.22em tracking). Motion: `--ease-out`
 - The visuals lazy-load (`visuals/use-scene.ts`), so three.js stays out of the first bundle. If
   WebGL is missing, the CSS backdrop shows instead.
 - Reduced motion: no idle animation, the spiral snaps to the scroll position, the sky
-  crossfades, foreground clouds clear without drifting, proximity snap is disabled, and reveals are opacity-only.
+  crossfades, foreground clouds stay static, proximity snap is disabled, and reveals are opacity-only.

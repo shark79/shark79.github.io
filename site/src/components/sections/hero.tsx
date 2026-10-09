@@ -11,7 +11,7 @@ const loadWisps = () => import("@/components/visuals/wisp-scene").then((m) => m.
 
 export function Hero() {
   const { canvasRef, sceneRef } = useScene(loadClouds, (scene) => scene.setFly(skyProgress()));
-  const { canvasRef: wispRef, sceneRef: wispSceneRef } = useScene(loadWisps, (scene) => scene.setClear(skyProgress()));
+  const { canvasRef: wispRef } = useScene(loadWisps);
   const backdropRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -20,7 +20,6 @@ export function Hero() {
       raf = 0;
       const fly = skyProgress();
       sceneRef.current?.setFly(fly);
-      wispSceneRef.current?.setClear(fly);
       // CSS fallback follows the same handoff when WebGL is unavailable.
       backdropRef.current?.style.setProperty("--sky-fade", String(1 - fly));
     };
@@ -33,7 +32,7 @@ export function Hero() {
       removeEventListener("scroll", onScroll);
       removeEventListener("resize", onScroll);
     };
-  }, [sceneRef, wispSceneRef]);
+  }, [sceneRef]);
 
   return (
     <>

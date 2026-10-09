@@ -115,13 +115,13 @@ export function createSpiral(canvas: HTMLCanvasElement, reducedMotion: boolean):
 
   function frame(now: number) {
     raf = 0;
-    if (!visible || document.hidden || enter === 0) return;
+    if (!visible || document.hidden) return;
     const dt = Math.min((now - last) / 1000, 0.05);
     last = now;
     current += (target - current) * (reducedMotion ? 1 : 1 - Math.exp(-dt * 4));
     const idle = reducedMotion ? 0 : now * 0.00004;
     sculpture.rotation.y = -0.35 + current * Math.PI * 1.1 + idle + (reducedMotion ? 0 : (1 - enter) * 0.45);
-    sculpture.position.y = baseY - (reducedMotion ? 0 : (1 - enter) * 2.4);
+    sculpture.position.y = baseY - (reducedMotion ? 0 : (1 - enter) * 1.2);
     sculpture.rotation.z = 0.32;
     layout(current * Math.PI * 1.5 + idle * 2);
     if (dirty || !reducedMotion) renderer.render(scene, camera);
