@@ -9,8 +9,6 @@ export const PROFILE = {
   name: "Shashank Jamkhandi",
   role: "AI Engineer",
   eyebrow: "AI Engineer · Applied GenAI & Agentic Systems",
-  // The positioning line: helpful *and* restrained. Don't sand it down.
-  tagline: ["AI that helps.", "And knows when not to."],
   intro:
     "I build AI that people rely on: clinical tools at DocAide.ai, and agent systems that stop to ask a human before they do anything that matters.",
   email: "shashankjamkhandi@gmail.com",

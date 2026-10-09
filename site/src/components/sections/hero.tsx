@@ -49,10 +49,7 @@ export function Hero() {
             </h1>
             <canvas ref={wispRef} aria-hidden="true" className="hero-name-clouds pointer-events-none absolute z-10" />
           </div>
-          <p className="relative z-20 mt-8 max-w-[320px] text-[17px] leading-relaxed font-light text-foreground/80 sm:max-w-none sm:text-[19px]">
-            {PROFILE.tagline[0]} {PROFILE.tagline[1]}
-          </p>
-          <span aria-hidden="true" className="relative z-20 mt-7 block h-px w-14 bg-foreground/40" />
+          <span aria-hidden="true" className="relative z-20 mt-10 block h-px w-14 bg-foreground/40" />
           <a href="#work" className="group relative z-20 mt-7 inline-flex min-h-11 items-center gap-3 text-[17px] font-light tracking-wide transition-opacity hover:opacity-70">
             See what I&apos;ve built
             <ArrowRight className="size-4 transition-transform duration-500 ease-[var(--ease-out)] group-hover:translate-x-1" />

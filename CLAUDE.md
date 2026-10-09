@@ -23,9 +23,9 @@ captures standing instructions so they don't need to be repeated on every design
   with a full-size lightbox. Keep new photos web-sized (~1600px, compressed) before adding.
 - The overall feel should read as **art you interact with** — motion, easing, and hover/scroll
   responses should feel considered and premium, not like generic template animation. A deliberate
-  wit/personality moment is welcome in the hero (currently "AI that helps. And knows when not to." —
-  helpful *and* restrained, which is the positioning) — don't sand that down into generic
-  resume-speak.
+  wit/personality moment is welcome in the hero — don't sand that down into generic
+  resume-speak. The hero leads with the name and work link; the owner removed the tagline
+  (Oct 2026), so don't restore it.
 - **NDA**: the day job is at **DocAide.ai**. Never name a former or current employer's internal /
   proprietary tool, product feature, or codename anywhere on the site. Describe that work only as a
   skill or a use of a publicly known tool ("AWS Bedrock", "Claude", "Square"), never as

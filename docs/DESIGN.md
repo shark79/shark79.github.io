@@ -27,7 +27,7 @@ in code, so there are no image, video or model files for them.
    sits explicitly above the real `h1` in an isolated stacking context. The banks use
    the same baked 3D noise as the sky, with their own volumetric lighting and slow drift.
    Alpha reaches 0.96 around the name and 0.82 across the letters, preserving some ink
-   through the clouds. The centre stays open. The tagline and work link are centred.
+   through the clouds. The centre stays open. A centred work link follows the name.
 2. **Work** (`sections/work.tsx`): one pinned scene. The spiral (`visuals/spiral-scene.ts`, 210
    instanced rounded slats on a helical spine, studio light and soft shadows) sits in a sticky
    stage and turns with scroll. The 11 projects hand over one by one around it: title and brief
