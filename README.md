@@ -41,7 +41,7 @@ Pages deploys through **GitHub Actions**, not from a branch. Pushing to `main` t
 
 ## Updating content
 
-All copy lives in [`site/src/lib/content.ts`](site/src/lib/content.ts): profile, rooms,
+All copy lives in [`site/src/lib/content.ts`](site/src/lib/content.ts): profile,
 projects, experience, skills and photos. To add a project, add an entry with an ISO `start`
 date. The list is sorted newest-first in code, so never hand-order it.
 
