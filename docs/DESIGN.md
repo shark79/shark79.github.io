@@ -31,14 +31,14 @@ in code, so there are no image, video or model files for them.
    viewport size changes. A centred work link follows the name; there is no tagline.
 2. **Work** (`sections/work.tsx`): one pinned scene. The spiral (`visuals/spiral-scene.ts`, 210
    instanced rounded slats on a helical spine, studio light and soft shadows) sits in a sticky
-   stage and turns with scroll. The 11 projects hand over one by one around it: title and brief
+   stage and turns with scroll. The projects hand over one by one around it: title and brief
    on the left, four numbers and the stack on the right, tick index on the far right.
    Desktop puts the spiral between the columns. Project text and stats sit on separate
    translucent white glass panels: 80% white, 20px backdrop blur, 24px corners, a bright
    border and a restrained shadow. Phones use one padded glass panel over the shared
    white wash below the sculpture. Inactive panels fade out as a whole so their surfaces
    don't stack over the visible project. Each project has 135vh of scroll and a proximity snap
-   point at its midpoint. Fast-wheel checks traverse all eleven projects and leave the
+   point at its midpoint. Fast-wheel checks traverse every project and leave the
    story normally, so proximity snap is retained.
 3. **About, Experience, Toolkit**: editorial sections with a numbered label, a large light
    statement, and hairline-separated content.
@@ -89,7 +89,7 @@ The full-hero cloud field and glass-panel revision was rebuilt and checked at 14
 390×844 (DPR 2) and 320px. All 86 browser flow checks passed again, including scrolling
 through all projects, project focus, every section, lightbox/menu keys, reduced motion
 and unavailable WebGL. Additional checks cover dense clouds beyond the heading with
-much lighter opacity across its letters and panel geometry for all eleven projects,
+much lighter opacity across its letters and panel geometry for every project (eleven at the time),
 including 1024px width. The final export retains 80% white backgrounds and computed
 20px glass blur; all panels fit without text clipping. TypeScript, ESLint and the
 production export passed again.
@@ -109,8 +109,9 @@ for the `.label` small caps (11px, 0.22em tracking). Motion: `--ease-out`
 
 ## Rules
 
-- Content lives in `lib/content.ts`. Projects are sorted by `start` in code, so never hand-order
-  them.
+- Projects and jobs are one file each in `src/content/{projects,experience}/`, validated by
+  `content/schema.ts` and sorted by `start` in code. Never hand-order them or hardcode the count.
+  Everything else lives in `lib/content.ts`.
 - The visuals lazy-load (`visuals/use-scene.ts`), so three.js stays out of the first bundle. If
   WebGL is missing, the CSS backdrop shows instead.
 - Reduced motion: no idle animation, the spiral snaps to the scroll position, the sky

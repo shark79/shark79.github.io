@@ -54,8 +54,11 @@ captures standing instructions so they don't need to be repeated on every design
   that turns with scroll while the projects transition around it (AIR reference). Both are code,
   not video — never lift media from reference sites. The castle direction was retired by the owner
   (Oct 2026); don't bring it back.
-- **All copy lives in `site/src/lib/content.ts`.** Projects carry an ISO `start` and are sorted
-  newest-first in code — add a project there with its date, never hand-order the list.
+- **Copy lives in `site/src/lib/content.ts`; projects and jobs are one file each** under
+  `site/src/content/projects/` and `site/src/content/experience/` (`defineProject` / `defineJob`,
+  registered in that folder's `index.ts`). `content/schema.ts` validates every entry at build
+  time and sorts newest-first by ISO `start` — never hand-order, never hardcode the project
+  count anywhere (the work section sizes itself).
 - Page sections live in `site/src/components/sections/` (one per file), visuals in
   `site/src/components/visuals/`, small shared pieces in `site/src/components/ui/`, composed in
   `site/src/app/page.tsx`.
