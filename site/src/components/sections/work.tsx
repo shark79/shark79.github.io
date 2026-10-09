@@ -200,7 +200,7 @@ export function Work() {
               <span
                 className={cn(
                   "h-px bg-foreground transition-all duration-500 ease-[var(--ease-out)]",
-                  i === active ? "w-5 opacity-100" : "w-2.5 opacity-30 group-hover:opacity-70",
+                  i === active ? "w-5 opacity-100" : "w-2.5 opacity-50 group-hover:opacity-90",
                 )}
               />
             </button>
