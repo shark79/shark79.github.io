@@ -1,7 +1,7 @@
 # shark79.github.io
 
 Personal portfolio for **Shashank Jamkhandi**, AI Engineer: a live cloud sky, then a white
-spiral sculpture that turns as eleven projects hand over one to the next.
+spiral sculpture that turns as each project hands over to the next.
 
 🌐 **Live site:** [shark79.github.io](https://shark79.github.io)
 
@@ -48,9 +48,17 @@ Pages deploys through **GitHub Actions**, not from a branch. Pushing to `main` t
 
 ## Updating content
 
-All copy lives in [`site/src/lib/content.ts`](site/src/lib/content.ts): profile,
-projects, experience, skills and photos. To add a project, add an entry with an ISO `start`
-date. The list is sorted newest-first in code, so never hand-order it.
+Profile, about, skills and photos live in [`site/src/lib/content.ts`](site/src/lib/content.ts).
+Projects and jobs are one file each:
+
+1. Copy any file in [`site/src/content/projects/`](site/src/content/projects/) (or
+   `content/experience/` for a job) to `<id>.ts` and fill it in with `defineProject` /
+   `defineJob`. Give it an ISO `start` date (`yyyy-mm`) and at most 4 stats.
+2. Import it in that folder's `index.ts`. Order there doesn't matter.
+
+Lists are sorted newest-first by `start`, and the work section sizes itself to the number of
+projects. A broken entry (duplicate id, bad date, more than 4 stats, invalid link) fails
+`npm run build` with a message naming the entry, so it can't ship.
 
 ## Structure
 
@@ -60,7 +68,8 @@ site/src/
   components/sections/  hero, work, about, experience, skills, gallery, contact
   components/visuals/   sky, foreground clouds, spiral, shared scroll progress, lazy scene hook
   components/ui/        section head, reveal observer, photo lightbox
-  lib/content.ts        every word on the site
+  content/              one file per project and job, plus schema.ts (types + validation)
+  lib/content.ts        profile, about, skills, photos; re-exports projects and jobs
 site/public/gallery/    photos (+ paintings/: 640px web copies used in the showreel)
 ```
 

@@ -157,7 +157,9 @@ export function Work() {
                   )}
                 </div>
 
-                {/* Right: the numbers (desktop only — mobile keeps it to the essentials) */}
+                {/* Right: the numbers (desktop only — mobile keeps it to the essentials).
+                    Skipped entirely for a project with no stats or tags. */}
+                {(p.stats.length > 0 || p.tags.length > 0) && (
                 <div className={cn(
                   "project-glass absolute top-1/2 right-12 hidden w-[24%] -translate-y-1/2 p-6 transition-opacity duration-500 lg:block",
                   state === "in" ? "opacity-100" : "opacity-0",
@@ -174,10 +176,15 @@ export function Work() {
                       </li>
                     ))}
                   </ul>
-                  <Line state={state} i={5}>
-                    <p className="label mt-10 leading-6 text-muted-foreground">{p.tags.join("  ·  ")}</p>
-                  </Line>
+                  {p.tags.length > 0 && (
+                    <Line state={state} i={5}>
+                      <p className={cn("label leading-6 text-muted-foreground", p.stats.length > 0 && "mt-10")}>
+                        {p.tags.join("  ·  ")}
+                      </p>
+                    </Line>
+                  )}
                 </div>
+                )}
               </li>
             );
           })}

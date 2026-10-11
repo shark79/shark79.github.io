@@ -10,7 +10,7 @@ export function Experience() {
 
       <ol className="mt-16 border-b border-line lg:mt-24">
         {JOBS.map((job) => (
-          <li key={job.company} className="reveal grid gap-6 border-t border-line py-12 lg:grid-cols-[1fr_2fr] lg:gap-24">
+          <li key={job.id} className="reveal grid gap-6 border-t border-line py-12 lg:grid-cols-[1fr_2fr] lg:gap-24">
             <div>
               <p className="text-[clamp(24px,2.4vw,32px)] font-normal tracking-[-0.01em]">{job.company}</p>
               <p className="mt-2 text-[16px]">{job.role}</p>
